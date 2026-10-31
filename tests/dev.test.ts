@@ -34,17 +34,6 @@ describe('dev options', () => {
     expect(m.snapshot().monsterLeft).toBeGreaterThan(0);
   });
 
-  it('monsterUnlocked makes clearing the board trigger the bonus, even after a death', () => {
-    const m = make({ monsterUnlocked: true, dotsLeft: 1 });
-    expect(m.level.lifeBestStreak).toBe(4);
-    runUntil(m, () => m.phase === 'playing');
-    const g = m.level.ghosts[0]!;
-    Object.assign(g, { state: 'active', frightened: false, x: m.level.paco.x, y: m.level.paco.y });
-    m.step(SIM_DT);
-    runUntil(m, () => m.phase === 'ready');
-    expect(m.level.lifeBestStreak).toBe(4);
-  });
-
   it('skipIntro, powerAtStart, dotsLeft', () => {
     const m = make({ skipIntro: true, powerAtStart: true, dotsLeft: 5 });
     expect(m.phase).toBe('ready');

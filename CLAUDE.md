@@ -20,7 +20,7 @@ Run `npm run check` before every commit. After any visual or UI change, also run
 and look at the PNGs in `screenshots/`.
 
 **Dev options**: main menu → DEV OPTIONS lets you pick any map and level, and toggle mechanics
-(Paco-Monster now, monster unlocked, power at start, invincible, infinite lives, no ghosts, dots
+(Paco-Monster now, power at start, invincible, infinite lives, no ghosts, dots
 left, skip intro). They're implemented as `DevOptions` in `src/game/match.ts` and tested in
 `tests/dev.test.ts`. When you add a new mechanic, add a dev switch for it too (Match option +
 checkbox in `index.html` `#screen-dev` + `App.DEV_FLAGS`).

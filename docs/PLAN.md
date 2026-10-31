@@ -53,12 +53,12 @@ Every number lives in `src/config.ts`.
 * **Level end**: when every dot and power ball is eaten, the game moves to the next map, cycling
   through the map list.
 * **Game start**: the intro jingle plays and the game stays frozen ("READY!") until it ends.
-* **Paco-Monster bonus**: if during the *current life* Paco ate ≥ 4 ghosts in a single power
-  streak, eating the last dot triggers the bonus instead of ending the level right away. During the
+* **Paco-Monster bonus**: every time Paco eats the last dot, it triggers the bonus instead of
+  ending the level right away. No unlock needed. During the
   bonus:
   * Paco grows to 2× size.
   * Every ghost turns blue and edible but keeps normal speed.
-  * Paco can smash any wall except the outer border, moving at 50 % speed while smashing. The
+  * Paco can smash any wall except the outer border, moving about 10 % faster than a frightened Paco, and at 70 % of that while smashing. The
     ghost door and house walls can be smashed too.
   * Eaten ghosts do not respawn. The multiplier continues from the current streak.
   * The level is won when the time runs out or all ghosts are eaten.

@@ -65,8 +65,6 @@ export interface LevelHooks {
 export interface LevelOptions {
   seed?: number;
   humanSlots?: boolean[];
-  /** Best ghost streak achieved during Paco's current life (carries across levels). */
-  lifeBestStreak?: number;
   hooks?: Partial<LevelHooks>;
   /** Dev/test switches (see DevOptions in match.ts). */
   invincible?: boolean;
@@ -90,7 +88,6 @@ export class Level {
   frightTotal = 0;
   /** Ghosts eaten in the current power streak. */
   streak = 0;
-  lifeBestStreak: number;
   monster = false;
   monsterLeft = 0;
   freeze = 0;
@@ -114,7 +111,6 @@ export class Level {
     this.levelNum = levelNum;
     this.rng = createRng(opts.seed ?? 1234);
     this.hooks = { emit: () => {}, score: () => {}, ...opts.hooks };
-    this.lifeBestStreak = opts.lifeBestStreak ?? 0;
     this.invincible = opts.invincible ?? false;
     this.noGhosts = opts.noGhosts ?? false;
     this.dotsTotal = this.maze.countDots();
@@ -223,7 +219,7 @@ export class Level {
     if (want) p.next = want;
     if (p.dir && p.next === OPPOSITE[p.dir]) p.dir = p.next;
     let speed = this.frightLeft > 0 ? sp.pacoFright : sp.paco;
-    if (this.monster) speed = sp.pacoFright * (p.smashing ? MONSTER.smashSpeedFactor : 1);
+    if (this.monster) speed = sp.pacoFright * MONSTER.speedFactor * (p.smashing ? MONSTER.smashSpeedFactor : 1);
     const maze = this.maze;
     const choose: Chooser = (_m, tx, ty) => {
       p.smashing = false;
@@ -271,8 +267,8 @@ export class Level {
           this.startFright();
         }
         if (this.dotsLeft <= 0) {
-          if (this.lifeBestStreak >= MONSTER.minStreakToUnlock) this.startMonster();
-          else this.outcome = { type: 'cleared' };
+          // Clearing the board always unleashes Paco-Monster; the level ends when it does.
+          this.startMonster();
         }
       }
     }
@@ -461,7 +457,6 @@ export class Level {
       if (wrappedDist(p.x, p.y, g.x, g.y, this.maze.w) >= reach) continue;
       if (g.frightened || this.monster) {
         this.streak++;
-        this.lifeBestStreak = Math.max(this.lifeBestStreak, this.streak);
         const pts = SCORE.ghostBase * 2 ** (this.streak - 1);
         this.hooks.score(pts, 'ghost');
         this.hooks.emit('ghostEaten');

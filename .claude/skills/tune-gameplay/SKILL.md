@@ -11,6 +11,5 @@ description: Change gameplay balance (speeds, timers, scores, lives, fog radius,
      `tests/audio.test.ts`.
    * `SCORE.*` values are asserted in `tests/level.test.ts` and `tests/match.test.ts`. Update the
      expectations only if the user asked for the new values.
-   * `MONSTER.minStreakToUnlock` is the user-specified "4 ghosts" rule.
 3. Update `docs/GAME_RULES.md` so it matches the new numbers.
 4. Run `npm run check`.

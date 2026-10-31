@@ -2,14 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { Level } from '../src/game/level.ts';
 import { MAPS } from '../src/game/maps/index.ts';
 import { D_DOT, D_POWER, T_PATH, T_WALL } from '../src/game/maze.ts';
-import { MONSTER, SCORE, SIM_DT, frightTime } from '../src/config.ts';
+import { MONSTER, SCORE, SIM_DT, frightTime, speeds } from '../src/config.ts';
 import type { GameEventType } from '../src/game/types.ts';
 
-function setup(level = 1, lifeBestStreak = 0) {
+function setup(level = 1) {
   const events: GameEventType[] = [];
   let score = 0;
   const L = new Level(MAPS[0]!, level, {
-    lifeBestStreak,
     hooks: { emit: (t) => events.push(t), score: (p) => (score += p) },
   });
   // Park Paco on a whole tile facing a wall-free direction so tests are predictable.
@@ -62,7 +61,6 @@ describe('Level scoring', () => {
     }
     // dots eaten along the way are 10s; subtract them
     expect(got.map((g) => g - (g % 100))).toEqual([200, 400, 800, 1600]);
-    expect(L.lifeBestStreak).toBe(4);
   });
 
   it('streak resets when the power effect ends', () => {
@@ -138,12 +136,12 @@ describe('Level progression', () => {
     L.maze.dots[i] = D_DOT;
     L.dotsLeft = 1;
     L.step(SIM_DT, idle);
-    expect(L.outcome).toEqual({ type: 'cleared' });
-    expect(L.monster).toBe(false);
+    expect(L.outcome).toBeNull();
+    expect(L.monster).toBe(true);
   });
 
-  it('triggers Paco-Monster when a 4-ghost streak happened this life', () => {
-    const { L, events, score } = setup(1, 4);
+  it('triggers Paco-Monster whenever the board is cleared, no streak needed', () => {
+    const { L, events, score } = setup(1);
     L.maze.dots.fill(0);
     L.maze.dots[L.maze.idx(Math.round(L.paco.x), L.paco.y)] = D_DOT;
     L.dotsLeft = 1;
@@ -165,7 +163,7 @@ describe('Level progression', () => {
   });
 
   it('Paco-Monster ends as soon as all ghosts are eaten', () => {
-    const { L } = setup(1, 4);
+    const { L } = setup(1);
     L.startMonster();
     for (let i = 0; i < 3; i++) L.ghosts[i]!.state = 'gone';
     L.step(SIM_DT, idle);
@@ -176,8 +174,14 @@ describe('Level progression', () => {
     expect(L.monsterLeft).toBe(0);
   });
 
+  it('Paco-Monster is faster than frightened Paco, also while smashing', () => {
+    const sp = speeds(1);
+    expect(sp.pacoFright * MONSTER.speedFactor).toBeGreaterThan(sp.pacoFright);
+    expect(sp.pacoFright * MONSTER.speedFactor * MONSTER.smashSpeedFactor).toBeGreaterThan(sp.pacoFright * 0.65);
+  });
+
   it('Paco-Monster smashes inner walls (slower) but not the border', () => {
-    const { L, events } = setup(1, 4);
+    const { L, events } = setup(1);
     L.startMonster();
     const m = L.maze;
     // Find a breakable wall directly above an open tile.

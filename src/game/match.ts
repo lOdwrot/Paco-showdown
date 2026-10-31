@@ -27,8 +27,6 @@ export interface DevOptions {
   mapIndex?: number;
   /** Start Paco-Monster as soon as the first round begins. */
   monsterNow?: boolean;
-  /** Pretend a 4-ghost streak already happened (clearing the board triggers the bonus). */
-  monsterUnlocked?: boolean;
   /** Start every round with a power ball active. */
   powerAtStart?: boolean;
   /** Ghosts can't catch Paco. */
@@ -75,7 +73,6 @@ export class Match {
   highScore: number;
   caughtBy = -1;
   private afterReveal: 'intro' | 'ready' = 'intro';
-  private lifeBestStreak = 0;
   private readonly inputs = new Map<string, Dir | null>();
   private events: (GameEvent & { tick: number })[] = [];
   private seq = 0;
@@ -97,7 +94,6 @@ export class Match {
     this.dev = opts.dev ?? {};
     this.mapOffset = this.dev.mapIndex !== undefined ? this.dev.mapIndex - (this.levelNum - 1) : 0;
     this.monsterNowPending = !!this.dev.monsterNow;
-    if (this.dev.monsterUnlocked) this.lifeBestStreak = 4;
     this.level = this.createLevel();
     this.assignGhosts();
     this.startRound(true);
@@ -263,7 +259,6 @@ export class Match {
     const { def } = mapForLevel(this.levelNum, this.mapOffset);
     const level = new Level(def, this.levelNum, {
       seed: this.seed + this.levelNum * 7919,
-      lifeBestStreak: this.lifeBestStreak,
       invincible: this.dev.invincible,
       noGhosts: this.dev.noGhosts,
     });
@@ -328,7 +323,6 @@ export class Match {
     this.setPhase('playing');
     if (this.monsterNowPending) {
       this.monsterNowPending = false;
-      this.level.lifeBestStreak = Math.max(this.level.lifeBestStreak, 4);
       this.level.startMonster();
     } else if (this.dev.powerAtStart) {
       this.level.triggerPower();
@@ -363,8 +357,6 @@ export class Match {
   private afterDeath(): void {
     const paco = this.player(this.pacoId);
     if (paco && !this.dev.infiniteLives) paco.lives = Math.max(0, paco.lives - 1);
-    this.lifeBestStreak = this.dev.monsterUnlocked ? 4 : 0;
-    this.level.lifeBestStreak = this.lifeBestStreak;
     if (this.mode === 'single') {
       if (!paco || paco.lives <= 0) return this.toGameOver();
     } else {
@@ -379,7 +371,6 @@ export class Match {
   }
 
   private nextLevel(): void {
-    this.lifeBestStreak = this.level.lifeBestStreak;
     this.levelNum++;
     this.level = this.createLevel();
     this.assignGhosts();

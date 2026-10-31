@@ -245,7 +245,6 @@ export class App {
 
   private static readonly DEV_FLAGS = [
     'monsterNow',
-    'monsterUnlocked',
     'powerAtStart',
     'invincible',
     'infiniteLives',
@@ -276,7 +275,6 @@ export class App {
     $('#screen-dev').addEventListener('change', () => this.saveDev(this.readDevForm()));
     const presets: Record<string, Partial<DevOptions>> = {
       smash: { monsterNow: true, invincible: true },
-      unlock: { monsterUnlocked: true, dotsLeft: 5 },
       clear: { dotsLeft: 1 },
       power: { powerAtStart: true, infiniteLives: true },
       reset: { skipIntro: false },

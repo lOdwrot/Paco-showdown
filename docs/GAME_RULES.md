@@ -35,9 +35,8 @@ Ghosts never reverse unless the mode changes or they reach a dead end. Frightene
 random exits. Eaten ghosts (eyes) use a BFS distance field to get home.
 
 ## Paco-Monster bonus
-To unlock it, Paco must eat 4 or more ghosts in a single power streak during his current life.
-After that, eating the last dot starts the bonus instead of ending the level. The unlock carries
-across levels and resets on death.
+Eating the last dot of every level starts the bonus instead of ending the level. There are no
+unlock conditions.
 
 During the bonus, which lasts 5 s:
 * Paco grows to 2× size.
@@ -45,7 +44,7 @@ During the bonus, which lasts 5 s:
 * There is no bonus dot. Wall smashes shake the whole board for every player, and a separate
   Paco-Monster music loop plays.
 * Paco can smash any wall except the outer border. The border is the edge cells plus any wall
-  touching the void (`_`). He moves at 50 % speed while smashing.
+  touching the void (`_`). He is about 10 % faster than a frightened Paco, and slower (70 % of that) while smashing.
 * Eaten ghosts never respawn. The streak multiplier continues.
 * The level is won when the time is up or as soon as every ghost has been eaten.
 
@@ -71,7 +70,6 @@ from the lobby (client message `profile`). Everyone sees the changes live.
 Main menu → DEV OPTIONS. You can choose the map and level (speed), how many dots to keep, and
 toggles for:
 * Paco-Monster now (wall smashing)
-* monster unlocked
 * power ball at start
 * invincible
 * infinite lives
@@ -79,5 +77,5 @@ toggles for:
 * skip intro
 
 A SOUND TEST section plays every effect, jingle, music loop and background loop.
-Presets: WALL SMASH, MONSTER UNLOCK, LEVEL CLEAR, POWER BALL. Dev games never save high scores
+Presets: WALL SMASH, LEVEL CLEAR, POWER BALL. Dev games never save high scores
 and show a red DEV badge.

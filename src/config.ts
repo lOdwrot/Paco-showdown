@@ -73,8 +73,8 @@ export const PHASE = {
 export const MONSTER = {
   duration: 10,
   scale: 2,
-  smashSpeedFactor: 0.65, // was 0.5: slightly faster while eating walls
-  minStreakToUnlock: 4,
+  speedFactor: 1.1, // Paco-Monster is a bit faster than a frightened-speed Paco...
+  smashSpeedFactor: 0.7, // ...and a bit faster while eating walls too (relative to the above)
   shakePixels: 2, // max screen-shake offset (native px) right after a wall smash
   shakeTime: 0.3, // seconds for the shake to die down
 } as const;
