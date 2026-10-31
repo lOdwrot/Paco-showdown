@@ -41,9 +41,8 @@ jobs:
 
   deploy:
     needs: check
-    # Deploy from the repository's default branch only (the github-pages environment
-    # rejects other branches). Change the default branch in Settings to switch.
-    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
+    # Every push to main publishes to GitHub Pages (after the checks above pass).
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       pages: write
