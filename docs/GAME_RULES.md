@@ -42,11 +42,12 @@ across levels and resets on death.
 During the bonus, which lasts 5 s:
 * Paco grows to 2× size.
 * All ghosts turn blue but keep their normal speed. They flee.
-* A big dot worth 2000 appears in the centre of the ghost house.
+* There is no bonus dot. Wall smashes shake the whole board for every player, and a separate
+  Paco-Monster music loop plays.
 * Paco can smash any wall except the outer border. The border is the edge cells plus any wall
   touching the void (`_`). He moves at 50 % speed while smashing.
 * Eaten ghosts never respawn. The streak multiplier continues.
-* When the 5 s are up, the level is won.
+* The level is won when the time is up or as soon as every ghost has been eaten.
 
 ## Multiplayer
 * Up to 5 players. The host is Paco first. Every other player controls a ghost slot, and AI fills

@@ -22,7 +22,6 @@ import {
   type GameEventType,
   type GhostState,
   type Popup,
-  type Vec,
 } from './types.ts';
 
 export interface PacoActor {
@@ -60,7 +59,7 @@ export type LevelOutcome = { type: 'died'; caughtBySlot: number } | { type: 'cle
 
 export interface LevelHooks {
   emit(type: GameEventType): void;
-  score(points: number, kind: 'dot' | 'power' | 'ghost' | 'bigDot'): void;
+  score(points: number, kind: 'dot' | 'power' | 'ghost'): void;
 }
 
 export interface LevelOptions {
@@ -94,7 +93,6 @@ export class Level {
   lifeBestStreak: number;
   monster = false;
   monsterLeft = 0;
-  bigDot: Vec | null = null;
   freeze = 0;
   popups: Popup[] = [];
   outcome: LevelOutcome = null;
@@ -210,6 +208,11 @@ export class Level {
     if (this.outcome) return;
     for (const g of this.ghosts) this.stepGhost(g, dt, input.ghosts[g.slot] ?? null);
     this.collide();
+    // Paco-Monster ends early once every ghost has been eaten.
+    if (this.monster && !this.outcome && this.ghosts.every((g) => g.noRespawn || g.state === 'gone')) {
+      this.monsterLeft = 0;
+      this.outcome = { type: 'cleared' };
+    }
   }
 
   // ---------------------------------------------------------------- Paco
@@ -273,12 +276,6 @@ export class Level {
         }
       }
     }
-    if (this.bigDot && wrappedDist(p.x, p.y, this.bigDot.x, this.bigDot.y, m.w) < 1.2) {
-      this.hooks.score(SCORE.bigDot, 'bigDot');
-      this.hooks.emit('bigDot');
-      this.popups.push({ x: this.bigDot.x, y: this.bigDot.y, text: String(SCORE.bigDot), ttl: 1.5, color: '#ffd700' });
-      this.bigDot = null;
-    }
   }
 
   /** Starts (or extends) the power-ball effect as if a power ball was eaten. */
@@ -320,7 +317,6 @@ export class Level {
     this.monsterLeft = MONSTER.duration;
     this.frightLeft = 0;
     this.paco.scale = MONSTER.scale;
-    this.bigDot = { x: this.maze.house.centerX, y: this.maze.house.centerY };
     for (const g of this.ghosts) {
       if (g.state === 'eyes' || g.state === 'entering') g.noRespawn = true;
       else if (g.state !== 'gone') {

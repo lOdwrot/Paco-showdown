@@ -1,4 +1,4 @@
-import { FOG, FRIGHT_FLASH_TIME, HUD_BOTTOM, HUD_TOP, TILE } from '../config.ts';
+import { FOG, FRIGHT_FLASH_TIME, HUD_BOTTOM, HUD_TOP, MONSTER, TILE } from '../config.ts';
 import { DEATH_ANIM_LEN, DEATH_ANIM_START } from '../game/match.ts';
 import { MAPS } from '../game/maps/index.ts';
 import { D_POWER, Maze } from '../game/maze.ts';
@@ -74,6 +74,9 @@ export class Renderer {
     this.canvas.style.height = `${this.canvas.height / dpr}px`;
   }
 
+  /** Current shake strength 0..1; refilled whenever a wall is smashed. */
+  private shake = 0;
+
   private ensureMaze(s: Snapshot): MazeCache {
     const key = `${s.level}:${s.mapIndex}`;
     if (!this.cache || this.cache.key !== key) {
@@ -97,6 +100,7 @@ export class Renderer {
       }
     } else if (s.broken.length > this.cache.brokenCount) {
       const c = this.cache;
+      this.shake = 1;
       for (let k = c.brokenCount; k < s.broken.length; k++) this.spawnDebris(c.maze, s.broken[k]!, c.maze.def.wallColor);
       c.maze.applyBroken(s.broken);
       c.brokenCount = s.broken.length;
@@ -134,6 +138,16 @@ export class Renderer {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, this.nativeW, this.nativeH);
 
+    // Whole-board screen shake while Paco-Monster crunches walls (same for every player).
+    if (s.monsterLeft <= 0 || s.phase !== 'playing') this.shake = 0;
+    if (this.shake > 0) {
+      const mag = this.shake * MONSTER.shakePixels;
+      const sx = Math.round((Math.random() * 2 - 1) * mag);
+      const sy = Math.round((Math.random() * 2 - 1) * mag);
+      ctx.setTransform(this.scale, 0, 0, this.scale, sx * this.scale, sy * this.scale);
+      this.shake = Math.max(0, this.shake - rc.dt / MONSTER.shakeTime);
+    }
+
     const me = s.players.find((p) => p.id === rc.myId);
     if (s.phase === 'roleReveal' && me) {
       this.drawRoleReveal(s, me.role, rc);
@@ -146,12 +160,6 @@ export class Renderer {
 
     ctx.drawImage(flashing ? mc.wallFlash : mc.wall, 0, HUD_TOP);
     this.drawDots(s, maze, rc);
-
-    if (s.bigDot) {
-      const r = 5 + Math.sin(rc.time * 10) * 1.5;
-      ctx.fillStyle = Math.floor(rc.time * 8) % 2 ? '#ffd700' : '#fff3a0';
-      this.pixelDisc(s.bigDot.x * TILE + 4, HUD_TOP + s.bigDot.y * TILE + 4, r);
-    }
 
     const showGhosts = !dyingAnim && s.phase !== 'levelComplete' && s.phase !== 'gameOver';
     if (showGhosts) for (const g of s.ghosts) this.drawGhost(s, g, rc);

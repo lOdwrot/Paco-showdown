@@ -7,7 +7,7 @@ import { isDir, type Dir } from '../game/types.ts';
  * Bump PROTOCOL_VERSION on breaking changes. Every inbound message is validated
  * by parseClientMsg / parseHostMsg – never trust the wire.
  */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 export const NICK_MAX = 10;
 
 export interface Profile {

@@ -46,7 +46,6 @@ export type GameEventType =
   | 'levelClear'
   | 'monsterStart'
   | 'wallSmash'
-  | 'bigDot'
   | 'roleReveal'
   | 'gameOver';
 
