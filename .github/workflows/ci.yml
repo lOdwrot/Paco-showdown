@@ -1,7 +1,7 @@
 name: CI & Deploy
 
 # Every push: typecheck, unit tests, build, headless smoke test.
-# Pushes to the game branch (or main) then publish the build to GitHub Pages,
+# Pushes to the default branch then publish the build to GitHub Pages,
 # but only if all checks passed. Requires Settings → Pages → Source = "GitHub Actions".
 on:
   push:
@@ -41,7 +41,9 @@ jobs:
 
   deploy:
     needs: check
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/claude/paco-showdown-game-i1rjn7' || github.ref == 'refs/heads/main')
+    # Deploy from the repository's default branch only (the github-pages environment
+    # rejects other branches). Change the default branch in Settings to switch.
+    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     permissions:
       pages: write
