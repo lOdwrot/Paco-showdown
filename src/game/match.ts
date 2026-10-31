@@ -229,7 +229,6 @@ export class Match {
         skin: this.ghostSkins[g.slot] ?? 'blaze',
         playerId: this.ghostOwners[g.slot] ?? null,
       })),
-      bigDot: L.bigDot,
       frightLeft: r2(L.frightLeft),
       frightTotal: L.frightTotal,
       monsterLeft: r2(L.monsterLeft),

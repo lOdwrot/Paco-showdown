@@ -151,7 +151,6 @@ describe('Level progression', () => {
     expect(L.outcome).toBeNull();
     expect(L.monster).toBe(true);
     expect(L.paco.scale).toBe(MONSTER.scale);
-    expect(L.bigDot).not.toBeNull();
     expect(events).toContain('monsterStart');
     expect(L.ghosts.every((g) => g.frightened)).toBe(true);
     // Eating a ghost in monster mode: no respawn.
@@ -163,6 +162,18 @@ describe('Level progression', () => {
     expect(L.ghosts[3]!.noRespawn).toBe(true);
     run(L, MONSTER.duration + 1);
     expect(L.outcome).toEqual({ type: 'cleared' });
+  });
+
+  it('Paco-Monster ends as soon as all ghosts are eaten', () => {
+    const { L } = setup(1, 4);
+    L.startMonster();
+    for (let i = 0; i < 3; i++) L.ghosts[i]!.state = 'gone';
+    L.step(SIM_DT, idle);
+    expect(L.outcome).toBeNull();
+    ghostOnPaco(L, 3, false);
+    L.step(SIM_DT, idle);
+    expect(L.outcome).toEqual({ type: 'cleared' });
+    expect(L.monsterLeft).toBe(0);
   });
 
   it('Paco-Monster smashes inner walls (slower) but not the border', () => {

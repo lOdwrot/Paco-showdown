@@ -125,6 +125,46 @@ export const MENU_THEME: Song = {
   ],
 };
 
+/**
+ * Paco-Monster theme (original): a fast, heavy D-minor stomp. Plays on the music
+ * bus for as long as the wall-eating mode lasts. 2 bars x 16 steps; loops seamlessly.
+ */
+export const MONSTER_THEME: Song = {
+  step: 0.1,
+  tracks: [
+    {
+      wave: 'sawtooth',
+      vol: 0.07,
+      notes:
+        'D3:2 D3 D3 A2:2 D3:2 F3 D3 C3:2 D3:4 ' +
+        'D3:2 D3 D3 A2:2 D3:2 G#3 A3 Bb3:2 A3:4 ' +
+        'Bb2:2 Bb2 Bb2 F3:2 Bb2:2 D3 Bb2 A2:2 Bb2:4 ' +
+        'A2:2 A2 A2 E3:2 A2:2 C#3 E3 G3:2 E3:4',
+    },
+    {
+      wave: 'square',
+      vol: 0.06,
+      notes:
+        'D5 F5 A5 F5 D6:2 C6 A5 F5 D5 F5 A5 C6 D6:2 - ' +
+        'D5 F5 A5 F5 D6:2 E6 D6 A5 G#5 A5 C6 E6 A5:2 - ' +
+        'Bb4 D5 F5 D5 Bb5:2 A5 F5 D5 Bb4 D5 F5 A5 Bb5:2 - ' +
+        'A4 C#5 E5 C#5 A5:2 G5 E5 C#5 E5 G5 A5 C#6 E6:2 -',
+    },
+    {
+      wave: 'triangle',
+      vol: 0.28,
+      notes:
+        'D2:4 D2:2 D2:2 D2:4 F2:2 A2:2 D2:4 D2:2 D2:2 D2:4 A2:2 F2:2 ' +
+        'Bb1:4 Bb1:2 Bb1:2 Bb1:4 D2:2 F2:2 A1:4 A1:2 A1:2 A1:4 C#2:2 E2:2',
+    },
+    {
+      wave: 'noise',
+      vol: 0.09,
+      notes: 'X:2 h:2 h:2 h:2 X:2 h:2 X:2 h:2 '.repeat(4),
+    },
+  ],
+};
+
 /** Loops a song on the synth's music bus until stopped. */
 export class MusicPlayer {
   private current: Song | null = null;

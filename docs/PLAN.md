@@ -58,11 +58,10 @@ Every number lives in `src/config.ts`.
   bonus:
   * Paco grows to 2× size.
   * Every ghost turns blue and edible but keeps normal speed.
-  * A special big dot (2000 points) appears in the middle of the ghost house.
   * Paco can smash any wall except the outer border, moving at 50 % speed while smashing. The
     ghost door and house walls can be smashed too.
   * Eaten ghosts do not respawn. The multiplier continues from the current streak.
-  * After 5 s the level is won.
+  * The level is won when the time runs out or all ghosts are eaten.
 
 ### Multiplayer
 * The main menu offers single player or multiplayer. Next comes the character screen: nickname,

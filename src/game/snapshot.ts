@@ -1,4 +1,4 @@
-import type { Dir, GameEvent, GhostState, Popup, Vec } from './types.ts';
+import type { Dir, GameEvent, GhostState, Popup } from './types.ts';
 
 export type MatchMode = 'single' | 'multi';
 
@@ -59,7 +59,6 @@ export interface Snapshot {
   dotsTotal: number;
   paco: SnapPaco;
   ghosts: SnapGhost[];
-  bigDot: Vec | null;
   frightLeft: number;
   frightTotal: number;
   monsterLeft: number;

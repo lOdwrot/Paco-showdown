@@ -1,6 +1,6 @@
 import type { Snapshot } from '../game/snapshot.ts';
 import type { GameEventType } from '../game/types.ts';
-import { GAME_OVER, INTRO, LEVEL_CLEAR, MENU_THEME, MusicPlayer, ROLE_STING, playSong } from './songs.ts';
+import { GAME_OVER, INTRO, LEVEL_CLEAR, MENU_THEME, MONSTER_THEME, MusicPlayer, ROLE_STING, playSong } from './songs.ts';
 import { Synth } from './synth.ts';
 
 /**
@@ -12,6 +12,9 @@ export class GameAudio {
   readonly music = new MusicPlayer(this.synth);
   private lastSeq = 0;
   private waka = false;
+  /** Consecutive wall smashes (pitch climbs), reset after a short pause. */
+  private smashCombo = 0;
+  private lastSmashAt = 0;
 
   constructor() {
     this.synth.setMuted(localStorage.getItem('paco.muted') === '1');
@@ -41,25 +44,35 @@ export class GameAudio {
   reset(): void {
     this.lastSeq = 0;
     this.synth.setLoop(null);
+    this.stopMonsterMusic();
   }
 
   stop(): void {
     this.synth.setLoop(null);
+    this.stopMonsterMusic();
+  }
+
+  private stopMonsterMusic(): void {
+    if (this.music.playing === MONSTER_THEME) this.music.stop();
   }
 
   update(s: Snapshot): void {
     for (const e of s.events) {
       if (e.seq <= this.lastSeq) continue;
       this.lastSeq = e.seq;
-      this.play(e.type);
+      // Eating a ghost as Paco-Monster gets its own, heavier sound.
+      this.play(e.type === 'ghostEaten' && s.monsterLeft > 0 ? 'monsterGulp' : e.type);
     }
     this.updateLoop(s);
   }
 
   private updateLoop(s: Snapshot): void {
     const sy = this.synth;
+    const monster = s.phase === 'playing' && s.monsterLeft > 0;
+    if (monster) this.music.play(MONSTER_THEME);
+    else this.stopMonsterMusic();
     if (s.phase !== 'playing') return sy.setLoop(null);
-    if (s.monsterLeft > 0) return sy.setLoop('monster', { wave: 'sawtooth', base: 90, depth: 30, rate: 14, vol: 0.09 });
+    if (monster) return sy.setLoop('monster', { wave: 'sawtooth', base: 70, depth: 20, rate: 11, vol: 0.05 });
     if (s.ghosts.some((g) => g.state === 'eyes' || g.state === 'entering'))
       return sy.setLoop('eyes', { wave: 'square', base: 900, depth: 350, rate: 9, lfoWave: 'sawtooth', vol: 0.04 });
     if (s.frightLeft > 0)
@@ -68,7 +81,7 @@ export class GameAudio {
     sy.setLoop('siren', { wave: 'sine', base: 420 + progress * 260, depth: 110, rate: 2.8 + progress * 2.5, vol: 0.07 });
   }
 
-  play(type: GameEventType | 'blip' | 'select'): void {
+  play(type: GameEventType | 'blip' | 'select' | 'monsterGulp'): void {
     const sy = this.synth;
     switch (type) {
       case 'intro':
@@ -100,17 +113,30 @@ export class GameAudio {
         playSong(sy, LEVEL_CLEAR);
         break;
       case 'monsterStart':
-        sy.noise(0.7, { vol: 0.35, cutoff: 1200, sweepTo: 120 });
-        sy.tone(220, 0.7, { wave: 'sawtooth', vol: 0.18, slideTo: 55 });
-        for (let i = 0; i < 4; i++) sy.tone(330 * 2 ** (i / 4), 0.1, { vol: 0.12, at: 0.7 + i * 0.08 });
+        // Transformation: rising growl, a thunderous boom, then a brassy power chord.
+        sy.noise(0.9, { vol: 0.4, cutoff: 1400, sweepTo: 90 });
+        sy.tone(70, 0.8, { wave: 'sawtooth', vol: 0.2, slideTo: 280 });
+        sy.tone(35, 0.9, { wave: 'square', vol: 0.2, at: 0.8, slideTo: 28 });
+        sy.noise(0.5, { vol: 0.45, cutoff: 500, sweepTo: 60, at: 0.8 });
+        for (const f of [147, 220, 294]) sy.tone(f, 0.5, { wave: 'sawtooth', vol: 0.1, at: 0.85 });
         break;
-      case 'wallSmash':
-        sy.noise(0.16, { vol: 0.35, cutoff: 900, sweepTo: 150 });
-        sy.tone(90, 0.12, { wave: 'square', vol: 0.12, slideTo: 50 });
+      case 'wallSmash': {
+        // Crunch + stone rumble; successive smashes climb in pitch like a combo.
+        const now = performance.now();
+        this.smashCombo = now - this.lastSmashAt < 700 ? Math.min(this.smashCombo + 1, 8) : 0;
+        this.lastSmashAt = now;
+        const up = 2 ** (this.smashCombo / 12);
+        sy.noise(0.2, { vol: 0.4, cutoff: 1100, sweepTo: 120 });
+        sy.noise(0.07, { vol: 0.25, cutoff: 5000, sweepTo: 800 });
+        sy.tone(110 * up, 0.16, { wave: 'square', vol: 0.14, slideTo: 40 });
+        sy.tone(660 * up, 0.05, { wave: 'triangle', vol: 0.1, at: 0.02, slideTo: 220 });
         break;
-      case 'bigDot':
-        sy.tone(900, 0.25, { vol: 0.16, slideTo: 120 });
-        for (let i = 0; i < 5; i++) sy.tone(523 * 2 ** (i / 3), 0.09, { vol: 0.12, at: 0.25 + i * 0.07 });
+      }
+      case 'monsterGulp':
+        // Big chomp: low "nom", a bite crunch and a rising victory tail.
+        sy.tone(160, 0.18, { wave: 'sawtooth', vol: 0.2, slideTo: 50 });
+        sy.noise(0.12, { vol: 0.3, cutoff: 2500, sweepTo: 200 });
+        for (let i = 0; i < 3; i++) sy.tone(294 * 2 ** (i / 3), 0.07, { wave: 'square', vol: 0.12, at: 0.15 + i * 0.06 });
         break;
       case 'roleReveal':
         playSong(sy, ROLE_STING);

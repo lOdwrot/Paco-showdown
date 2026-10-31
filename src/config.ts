@@ -18,7 +18,6 @@ export const SCORE = {
   dot: 10,
   powerBall: 10,
   ghostBase: 200, // 200, 400, 800, 1600, ... (doubles, uncapped)
-  bigDot: 2000, // Paco-Monster special dot
   catchPaco: 1000, // multiplayer: ghost player catches Paco
 } as const;
 
@@ -76,6 +75,8 @@ export const MONSTER = {
   scale: 2,
   smashSpeedFactor: 0.65, // was 0.5: slightly faster while eating walls
   minStreakToUnlock: 4,
+  shakePixels: 2, // max screen-shake offset (native px) right after a wall smash
+  shakeTime: 0.3, // seconds for the shake to die down
 } as const;
 
 /** Collision radius in tiles between Paco and a ghost (scaled by Paco's size). */
