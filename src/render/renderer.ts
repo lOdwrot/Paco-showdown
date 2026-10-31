@@ -53,15 +53,22 @@ export class Renderer {
     this.ctx = canvas.getContext('2d')!;
   }
 
-  /** Fits the canvas into a box (CSS pixels). */
+  /**
+   * Fits the canvas into a box (CSS pixels), filling as much of it as possible.
+   * Uses whole-number scaling when that loses little space (crispest pixels),
+   * otherwise a fractional scale so small/odd screens aren't left mostly empty.
+   */
   fit(boxW: number, boxH: number): void {
+    if (boxW <= 0 || boxH <= 0) return;
     const dpr = window.devicePixelRatio || 1;
-    const s = Math.max(1, Math.floor(Math.min(boxW / this.nativeW, boxH / this.nativeH) * dpr));
+    const exact = Math.min(boxW / this.nativeW, boxH / this.nativeH) * dpr;
+    const whole = Math.floor(exact);
+    const s = whole >= 1 && whole / exact >= 0.9 ? whole : Math.max(0.5, exact);
     this.scale = s;
-    this.canvas.width = this.nativeW * s;
-    this.canvas.height = this.nativeH * s;
-    this.canvas.style.width = `${(this.nativeW * s) / dpr}px`;
-    this.canvas.style.height = `${(this.nativeH * s) / dpr}px`;
+    this.canvas.width = Math.floor(this.nativeW * s);
+    this.canvas.height = Math.floor(this.nativeH * s);
+    this.canvas.style.width = `${this.canvas.width / dpr}px`;
+    this.canvas.style.height = `${this.canvas.height / dpr}px`;
   }
 
   private ensureMaze(s: Snapshot): MazeCache {

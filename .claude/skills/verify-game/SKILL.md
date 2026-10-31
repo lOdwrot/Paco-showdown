@@ -11,6 +11,8 @@ description: Full verification of Paco Showdown – typecheck, unit tests, build
    * `01-title`, `02-setup`, `03-intro` (READY!), `04-playing`, `05-monster` (forced Paco-Monster)
    * `06-lobby`, `07/08-*-reveal` (YOU ARE: screens), `09-host-play`, `10-guest-fog` (fog of
      war for the ghost player)
+   * `11-mobile-portrait`, `11-mobile-landscape`: phone layouts. The test asserts that the maze
+     fills the screen and that the D-pad doesn't overlap it.
    Multiplayer uses `?net=local` (BroadcastChannel), so no network is needed.
 3. **Look at the screenshots** with the Read tool. Check that walls are outlined, dots and sprites
    are visible, the HUD text is readable, the scoreboard is populated, and there are no blank

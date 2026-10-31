@@ -43,9 +43,14 @@ export class App {
     this.input.onKey = (code) => this.onKey(code);
     canvas.addEventListener('nativeresize', () => this.layout());
     window.addEventListener('resize', () => this.layout());
+    // Re-fit whenever the game area changes size (rotation, address bar, side panel).
+    new ResizeObserver(() => this.layout()).observe($('#canvas-box'));
     this.bindButtons();
     this.buildSkinPickers();
-    if ('ontouchstart' in window) $('#dpad').classList.remove('hidden');
+    if ('ontouchstart' in window || matchMedia('(pointer: coarse)').matches) {
+      $('#dpad').classList.remove('hidden');
+      document.body.classList.add('touch');
+    }
     document.querySelectorAll<HTMLButtonElement>('#dpad button').forEach((b) =>
       b.addEventListener('touchstart', (e) => {
         e.preventDefault();
@@ -65,7 +70,10 @@ export class App {
     this.screen = s;
     for (const id of ['title', 'setup', 'lobby', 'game', 'over'])
       $(`#screen-${id}`).classList.toggle('hidden', id !== s);
-    if (s === 'game') this.layout();
+    if (s === 'game') {
+      this.layout();
+      requestAnimationFrame(() => this.layout());
+    }
   }
 
   toast(msg: string): void {

@@ -83,6 +83,32 @@ try {
   assert(s.monsterLeft > 0 || s.phase === 'levelComplete', 'monster mode should run');
   await p.close();
 
+  // ---------------- phone layout (portrait + landscape): the maze must fill the screen
+  for (const [name, vp] of [['portrait', { width: 390, height: 664 }], ['landscape', { width: 750, height: 342 }]]) {
+    const mctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const m = await mctx.newPage();
+    watch(m, `mobile-${name}`);
+    await m.goto(BASE);
+    await m.tap('[data-action=single]');
+    await m.tap('[data-action=start-single]');
+    await sleep(800);
+    await m.screenshot({ path: `${OUT}/11-mobile-${name}.png` });
+    const r = await m.evaluate(() => {
+      const b = document.querySelector('#game').getBoundingClientRect();
+      const d = document.querySelector('#dpad').getBoundingClientRect();
+      return { w: b.width, h: b.height, top: b.top, bottom: b.bottom, dpadTop: d.top, dpadLeft: d.left, right: b.right };
+    });
+    if (name === 'portrait') {
+      assert(r.w >= vp.width * 0.85, `portrait maze too small: ${r.w}px of ${vp.width}`);
+      assert(r.bottom <= r.dpadTop, 'portrait D-pad overlaps the maze');
+    } else {
+      assert(r.h >= vp.height * 0.95, `landscape maze too small: ${r.h}px of ${vp.height}`);
+      assert(r.right <= r.dpadLeft, 'landscape D-pad overlaps the maze');
+    }
+    assert(r.top >= 0 && r.bottom <= vp.height + 1, `${name} maze clipped`);
+    await mctx.close();
+  }
+
   // ---------------- multiplayer (BroadcastChannel transport)
   const host = await ctx.newPage();
   const guest = await ctx.newPage();

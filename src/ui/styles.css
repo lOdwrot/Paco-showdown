@@ -11,7 +11,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: #fff; font-family: var(--font); overflow: hidden; }
+html, body { margin: 0; height: 100%; height: 100dvh; overscroll-behavior: none; touch-action: manipulation; background: var(--bg); color: #fff; font-family: var(--font); overflow: hidden; }
 canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
 button, input { font-family: var(--font); }
 
@@ -61,7 +61,7 @@ input:focus { outline: none; border-color: var(--yellow); }
 
 #screen-game { padding: 0; width: 100%; height: 100%; }
 #game-wrap { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; gap: 12px; }
-#canvas-box { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; min-width: 0; }
+#canvas-box { flex: 1 1 0; height: 100%; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; min-width: 0; }
 #side { width: 210px; align-self: stretch; display: flex; flex-direction: column; gap: 10px; padding: 16px 10px; border-left: 2px solid #111; }
 #scoreboard { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 #scoreboard li { border: 2px solid #222; padding: 6px; font-size: 8px; display: grid; grid-template-columns: 26px 1fr; gap: 2px 8px; align-items: center; }
@@ -83,9 +83,39 @@ input:focus { outline: none; border-color: var(--yellow); }
 
 #toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: #200; border: 3px solid var(--red); padding: 10px 16px; font-size: 10px; z-index: 10; max-width: 90vw; text-align: center; line-height: 1.6; }
 
-@media (max-width: 760px) {
-  #game-wrap { flex-direction: column; gap: 4px; }
-  #side { width: 100%; border-left: 0; border-top: 2px solid #111; padding: 6px; align-self: auto; }
-  #scoreboard { flex-direction: row; flex-wrap: wrap; }
+/* ---------- small screens & touch devices ---------- */
+@media (max-width: 760px), (pointer: coarse) {
+  #screen-game { flex-direction: column; gap: 0; }
+  #game-wrap { flex: 1 1 0; min-height: 0; }
   #side-help, #side h3 { display: none; }
+  #scoreboard li { grid-template-columns: 20px auto; padding: 3px 5px; font-size: 7px; }
+  #scoreboard li canvas { width: 20px; height: 20px; }
+  #scoreboard .score { font-size: 8px; }
+}
+
+/* Portrait: maze on top (full width), compact scoreboard, D-pad below. */
+@media (max-width: 760px) and (orientation: portrait), (pointer: coarse) and (orientation: portrait) {
+  #game-wrap { flex-direction: column; gap: 4px; }
+  #canvas-box { width: 100%; }
+  #side { flex: none; width: 100%; border: 0; padding: 2px 6px; align-self: auto; }
+  #scoreboard { flex-direction: row; flex-wrap: wrap; gap: 4px; justify-content: center; }
+  #dpad { position: static; flex: none; margin: 6px auto max(10px, env(safe-area-inset-bottom)); grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 50px); }
+}
+
+/* Landscape phones: scoreboard left, maze centre (full height), D-pad right. */
+@media (pointer: coarse) and (orientation: landscape) {
+  #game-wrap { flex-direction: row; gap: 6px; padding-right: 196px; }
+  #side { order: -1; width: 130px; flex: none; border: 0; padding: 6px 4px; }
+  #scoreboard { flex-direction: column; }
+  #dpad { position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: 10px; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 58px); }
+}
+
+/* Menus on short/narrow screens. */
+@media (max-width: 760px), (max-height: 500px) {
+  .screen { gap: 10px; padding: 12px 10px; }
+  .btn { padding: 10px 14px; font-size: 12px; }
+  .skins { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+  .skin canvas { width: 48px; height: 48px; }
+  h2 { font-size: 14px; }
+  #room-code { font-size: 30px; letter-spacing: 6px; }
 }
