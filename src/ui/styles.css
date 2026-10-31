@@ -146,3 +146,6 @@ body.in-game #btn-mute { display: none; }
   h2 { font-size: 14px; }
   #room-code { font-size: 30px; letter-spacing: 6px; }
 }
+
+#podium { width: min(720px, 94vw); image-rendering: pixelated; background: #05050f; border: 3px solid #222; }
+#podium.hidden { display: none; }

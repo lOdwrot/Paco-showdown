@@ -9,6 +9,7 @@ import { Renderer } from '../render/renderer.ts';
 import { SPRITE, ghostFrame, pacFrame } from '../render/sprites.ts';
 import type { DevOptions } from '../game/match.ts';
 import { MAPS } from '../game/maps/index.ts';
+import { Podium } from './podium.ts';
 import { Carousel } from './carousel.ts';
 import { ClientRoom } from '../session/clientRoom.ts';
 import { HostRoom } from '../session/hostRoom.ts';
@@ -40,6 +41,7 @@ export class App {
   private time = 0;
   private boardTimer = 0;
   private lastSnap: Snapshot | null = null;
+  private podium!: Podium;
   private pacCarousel!: Carousel;
   private ghostCarousel!: Carousel;
   /** Dev options of the running/last dev game (null = normal game). */
@@ -54,6 +56,7 @@ export class App {
     window.addEventListener('resize', () => this.layout());
     // Re-fit whenever the game area changes size (rotation, address bar, side panel).
     new ResizeObserver(() => this.layout()).observe($('#canvas-box'));
+    this.podium = new Podium($<HTMLCanvasElement>('#podium'));
     this.bindButtons();
     this.buildProfileEditor();
     this.buildDevScreen();
@@ -451,6 +454,9 @@ export class App {
         li.insertAdjacentHTML('beforeend', `<span class="grow">${i + 1}. ${p.nick}</span><span>${p.score}</span>`);
         ol.append(li);
       });
+    const multi = s.mode === 'multi';
+    $('#podium').classList.toggle('hidden', !multi);
+    if (multi) this.podium.start(s.players, this.session?.myId ?? '');
     $('#btn-again').classList.toggle('hidden', s.mode !== 'single');
     $('#btn-again').textContent = this.devGame ? 'RETRY' : 'PLAY AGAIN';
     this.audio.stop();
@@ -480,6 +486,7 @@ export class App {
     if (dt <= 0) return;
     this.time += dt;
     if (this.screen === 'title') this.drawAttract();
+    if (this.screen === 'over') this.podium.draw(dt);
     if (this.screen === 'setup' || this.screen === 'lobby') {
       this.pacCarousel.draw(this.time);
       this.ghostCarousel.draw(this.time);
