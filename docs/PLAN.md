@@ -105,8 +105,8 @@ src/
     roomCode.ts
   session/
     localSession.ts    single player: Match + local input
-    hostSession.ts     runs Match, applies remote inputs, broadcasts snapshots
-    clientSession.ts   sends inputs, receives & interpolates snapshots
+    hostRoom.ts        lobby + runs Match, applies remote inputs, broadcasts snapshots
+    clientRoom.ts      sends inputs, receives & interpolates snapshots
   render/              Canvas 2D: maze (cached outline), sprites, fog, HUD text, popups
   audio/               WebAudio synth, song/sfx definitions, loop manager (derived from snapshot)
   input/               keyboard + touch swipe
