@@ -1,4 +1,4 @@
-import { GameAudio } from '../audio/audio.ts';
+import { GameAudio, SOUND_TEST } from '../audio/audio.ts';
 import type { Snapshot } from '../game/snapshot.ts';
 import type { Dir } from '../game/types.ts';
 import { Input } from '../input/input.ts';
@@ -101,6 +101,7 @@ export class App {
     for (const id of ['title', 'setup', 'lobby', 'dev', 'game', 'over'])
       $(`#screen-${id}`).classList.toggle('hidden', id !== s);
     document.body.classList.toggle('in-game', s === 'game');
+    this.audio.endSoundTest();
     this.audio.menuMusic(MENU_SCREENS.includes(s));
     if (s === 'game') {
       this.layout();
@@ -258,6 +259,20 @@ export class App {
     const lvl = $<HTMLSelectElement>('#dev-level');
     for (let i = 1; i <= 20; i++) lvl.add(new Option(String(i), String(i)));
     this.writeDevForm(this.loadDev());
+    const box = $('#sound-test');
+    const add = (label: string, kind: 'sound' | 'music' | 'loop' | 'stop', name = '') => {
+      const b = document.createElement('button');
+      b.className = 'btn small';
+      b.textContent = label;
+      b.addEventListener('click', () => this.audio.testPlay(kind, name));
+      box.append(b);
+    };
+    const nice = (n: string) => n.replace(/([A-Z])/g, ' $1').toUpperCase();
+    for (const n of SOUND_TEST.effects) add(nice(n), 'sound', n);
+    for (const n of SOUND_TEST.jingles) add(`♪ ${nice(n)}`, 'sound', n);
+    for (const [n] of SOUND_TEST.music) add(`♫ ${n}`, 'music', n);
+    for (const n of SOUND_TEST.loops) add(`∞ ${n.toUpperCase()}`, 'loop', n);
+    add('STOP', 'stop');
     $('#screen-dev').addEventListener('change', () => this.saveDev(this.readDevForm()));
     const presets: Record<string, Partial<DevOptions>> = {
       smash: { monsterNow: true, invincible: true },

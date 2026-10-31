@@ -1,7 +1,32 @@
 import type { Snapshot } from '../game/snapshot.ts';
 import type { GameEventType } from '../game/types.ts';
-import { GAME_OVER, INTRO, LEVEL_CLEAR, MENU_THEME, MONSTER_THEME, MusicPlayer, ROLE_STING, playSong } from './songs.ts';
+import type { LoopSpec } from './synth.ts';
+import { GAME_OVER, INTRO, LEVEL_CLEAR, MENU_THEME, MONSTER_THEME, MusicPlayer, ROLE_STING, playSong, type Song } from './songs.ts';
 import { Synth } from './synth.ts';
+
+/** Looping background sounds, keyed by name (used by the game and the dev sound test). */
+const LOOPS: Record<string, LoopSpec> = {
+  monster: { wave: 'sawtooth', base: 70, depth: 20, rate: 11, vol: 0.05 },
+  eyes: { wave: 'square', base: 900, depth: 350, rate: 9, lfoWave: 'sawtooth', vol: 0.04 },
+  fright: { wave: 'square', base: 260, depth: 90, rate: 7, lfoWave: 'sawtooth', vol: 0.05 },
+  siren: { wave: 'sine', base: 520, depth: 110, rate: 4, vol: 0.07 },
+};
+
+type SoundName = GameEventType | 'blip' | 'select' | 'monsterGulp';
+
+/** Everything the DEV OPTIONS sound test can play. */
+export const SOUND_TEST = {
+  effects: [
+    'dot', 'power', 'ghostEaten', 'monsterGulp', 'pacoCaught', 'death', 'wallSmash', 'monsterStart',
+    'ready', 'blip', 'select',
+  ] as SoundName[],
+  jingles: ['intro', 'roleReveal', 'levelClear', 'gameOver'] as SoundName[],
+  music: [
+    ['MENU THEME', MENU_THEME],
+    ['MONSTER THEME', MONSTER_THEME],
+  ] as [string, Song][],
+  loops: ['siren', 'fright', 'eyes', 'monster'],
+};
 
 /**
  * Turns snapshots into sound. One-shot effects come from snapshot events (each
@@ -13,6 +38,8 @@ export class GameAudio {
   private lastSeq = 0;
   private waka = false;
   /** Consecutive wall smashes (pitch climbs), reset after a short pause. */
+  /** Dev sound test active: menu music must not override what the tester picked. */
+  private soundTest = false;
   private smashCombo = 0;
   private lastSmashAt = 0;
 
@@ -32,8 +59,35 @@ export class GameAudio {
 
   /** Menu theme on/off (menus call this; starting a game stops it). */
   menuMusic(on: boolean): void {
+    if (this.soundTest) return;
     if (on) this.music.play(MENU_THEME);
     else this.music.stop();
+  }
+
+  /** Dev sound test: plays one sound by name, a looping song, a background loop, or stops everything. */
+  testPlay(kind: 'sound' | 'music' | 'loop' | 'stop', name = ''): void {
+    this.unlock();
+    this.soundTest = true;
+    if (kind === 'sound') this.play(name as SoundName);
+    else if (kind === 'music') {
+      this.synth.setLoop(null);
+      const song = SOUND_TEST.music.find(([n]) => n === name)?.[1];
+      if (song) this.music.play(song);
+    } else if (kind === 'loop') {
+      this.music.stop();
+      this.synth.setLoop(name, LOOPS[name]);
+    } else {
+      this.music.stop();
+      this.synth.setLoop(null);
+    }
+  }
+
+  /** Leaves the sound test (menu music takes over again on the next call). */
+  endSoundTest(): void {
+    if (!this.soundTest) return;
+    this.soundTest = false;
+    this.music.stop();
+    this.synth.setLoop(null);
   }
 
   get muted(): boolean {
@@ -72,16 +126,16 @@ export class GameAudio {
     if (monster) this.music.play(MONSTER_THEME);
     else this.stopMonsterMusic();
     if (s.phase !== 'playing') return sy.setLoop(null);
-    if (monster) return sy.setLoop('monster', { wave: 'sawtooth', base: 70, depth: 20, rate: 11, vol: 0.05 });
+    if (monster) return sy.setLoop('monster', LOOPS.monster);
     if (s.ghosts.some((g) => g.state === 'eyes' || g.state === 'entering'))
-      return sy.setLoop('eyes', { wave: 'square', base: 900, depth: 350, rate: 9, lfoWave: 'sawtooth', vol: 0.04 });
+      return sy.setLoop('eyes', LOOPS.eyes);
     if (s.frightLeft > 0)
-      return sy.setLoop('fright', { wave: 'square', base: 260, depth: 90, rate: 7, lfoWave: 'sawtooth', vol: 0.05 });
+      return sy.setLoop('fright', LOOPS.fright);
     const progress = 1 - s.dotsLeft / Math.max(1, s.dotsTotal);
-    sy.setLoop('siren', { wave: 'sine', base: 420 + progress * 260, depth: 110, rate: 2.8 + progress * 2.5, vol: 0.07 });
+    sy.setLoop('siren', { ...LOOPS.siren!, base: 420 + progress * 260, rate: 2.8 + progress * 2.5 });
   }
 
-  play(type: GameEventType | 'blip' | 'select' | 'monsterGulp'): void {
+  play(type: SoundName): void {
     const sy = this.synth;
     switch (type) {
       case 'intro':

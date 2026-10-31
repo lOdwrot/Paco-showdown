@@ -78,5 +78,6 @@ toggles for:
 * no ghosts
 * skip intro
 
+A SOUND TEST section plays every effect, jingle, music loop and background loop.
 Presets: WALL SMASH, MONSTER UNLOCK, LEVEL CLEAR, POWER BALL. Dev games never save high scores
 and show a red DEV badge.
