@@ -69,6 +69,9 @@ export interface LevelOptions {
   /** Best ghost streak achieved during Paco's current life (carries across levels). */
   lifeBestStreak?: number;
   hooks?: Partial<LevelHooks>;
+  /** Dev/test switches (see DevOptions in match.ts). */
+  invincible?: boolean;
+  noGhosts?: boolean;
 }
 
 /**
@@ -97,6 +100,10 @@ export class Level {
   outcome: LevelOutcome = null;
   time = 0;
 
+  /** Dev: ghosts can't hurt Paco. */
+  invincible: boolean;
+  /** Dev: ghosts never leave the house. */
+  noGhosts: boolean;
   private modeIdx = 0;
   private modeTimer = MODE_WAVES[0]!;
   private readonly rng: () => number;
@@ -110,6 +117,8 @@ export class Level {
     this.rng = createRng(opts.seed ?? 1234);
     this.hooks = { emit: () => {}, score: () => {}, ...opts.hooks };
     this.lifeBestStreak = opts.lifeBestStreak ?? 0;
+    this.invincible = opts.invincible ?? false;
+    this.noGhosts = opts.noGhosts ?? false;
     this.dotsTotal = this.maze.countDots();
     this.dotsLeft = this.dotsTotal;
     this.paco = { x: 0, y: 0, dir: 'left', next: null, chomp: 0, moving: false, scale: 1, smashing: false };
@@ -150,7 +159,7 @@ export class Level {
         next: null,
         state: 'house',
         frightened: false,
-        release: GHOST_RELEASE[i] ?? 0,
+        release: this.noGhosts ? Infinity : (GHOST_RELEASE[i] ?? 0),
         noRespawn: false,
       });
     });
@@ -270,6 +279,23 @@ export class Level {
       this.popups.push({ x: this.bigDot.x, y: this.bigDot.y, text: String(SCORE.bigDot), ttl: 1.5, color: '#ffd700' });
       this.bigDot = null;
     }
+  }
+
+  /** Starts (or extends) the power-ball effect as if a power ball was eaten. */
+  triggerPower(): void {
+    this.startFright();
+  }
+
+  /** Dev: removes all but the `keep` dots/power balls closest to Paco's spawn. */
+  trimDots(keep: number): void {
+    const m = this.maze;
+    const s = m.pacoSpawn;
+    const cells: number[] = [];
+    m.dots.forEach((d, i) => d && cells.push(i));
+    const dist = (i: number) => Math.abs((i % m.w) - s.x) + Math.abs(Math.floor(i / m.w) - s.y);
+    cells.sort((a, b) => dist(a) - dist(b));
+    for (const i of cells.slice(Math.max(0, keep))) m.dots[i] = 0;
+    this.dotsLeft = Math.min(cells.length, Math.max(0, keep));
   }
 
   private startFright(): void {
@@ -452,7 +478,7 @@ export class Level {
         g.y = Math.round(g.y);
         if (g.x >= this.maze.w) g.x -= this.maze.w;
         this.freeze = PHASE.ghostEatenFreeze;
-      } else {
+      } else if (!this.invincible) {
         this.outcome = { type: 'died', caughtBySlot: g.slot };
         return;
       }

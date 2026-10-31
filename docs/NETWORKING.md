@@ -31,8 +31,8 @@ Pick the transport at runtime with `?net=peer|ws|local`, or at build time with `
 The relay only routes messages. To make the server authoritative instead, run `Match` in Node,
 since `src/game` has no DOM dependencies, and send the same `HostMsg` messages.
 
-## Protocol (`net/protocol.ts`, version 1)
-Client → host: `hello{v, profile}`, `input{dir}`, `ping{at}`.
+## Protocol (`net/protocol.ts`, version 2)
+Client → host: `hello{v, profile}`, `profile{profile}` (lobby only), `input{dir}`, `ping{at}`.
 Host → client: `welcome{id, code}`, `reject{reason}`, `lobby{players}`, `start`,
 `snap{s: Snapshot}`, `end{reason}`, `pong{at}`.
 The host validates every inbound message: it sanitises nicknames and checks skins against the

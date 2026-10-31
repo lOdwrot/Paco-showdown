@@ -18,6 +18,9 @@ export interface LoopSpec {
 export class Synth {
   ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  /** Separate bus for music so it can be faded/cut without touching effects. */
+  private musicBus: GainNode | null = null;
+  musicVolume = 0.55;
   private loop: { key: string; osc: OscillatorNode; lfo: OscillatorNode; lfoGain: GainNode; gain: GainNode } | null =
     null;
   muted = false;
@@ -32,8 +35,30 @@ export class Synth {
       this.master = this.ctx.createGain();
       this.master.gain.value = this.muted ? 0 : this.volume;
       this.master.connect(this.ctx.destination);
+      this.newMusicBus();
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
+  }
+
+  private newMusicBus(): void {
+    if (!this.ctx || !this.master) return;
+    this.musicBus = this.ctx.createGain();
+    this.musicBus.gain.value = this.musicVolume;
+    this.musicBus.connect(this.master);
+  }
+
+  /** Silences everything already scheduled on the music bus (fast fade). */
+  cutMusic(): void {
+    const ctx = this.ctx;
+    const bus = this.musicBus;
+    if (!ctx || !bus) return;
+    bus.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.04);
+    setTimeout(() => bus.disconnect(), 300);
+    this.newMusicBus();
+  }
+
+  private out(bus?: 'sfx' | 'music'): AudioNode | null {
+    return bus === 'music' ? this.musicBus : this.master;
   }
 
   setMuted(m: boolean): void {
@@ -46,9 +71,14 @@ export class Synth {
   }
 
   /** One note, optionally sliding to another frequency. `at` is relative to now. */
-  tone(freq: number, dur: number, opts: { wave?: Wave; vol?: number; at?: number; slideTo?: number } = {}): void {
+  tone(
+    freq: number,
+    dur: number,
+    opts: { wave?: Wave; vol?: number; at?: number; slideTo?: number; bus?: 'sfx' | 'music' } = {},
+  ): void {
     const ctx = this.ctx;
-    if (!ctx || !this.master) return;
+    const dest = this.out(opts.bus);
+    if (!ctx || !dest) return;
     const t0 = ctx.currentTime + (opts.at ?? 0);
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
@@ -60,14 +90,18 @@ export class Synth {
     g.gain.exponentialRampToValueAtTime(v, t0 + 0.005);
     g.gain.setValueAtTime(v, t0 + Math.max(0.006, dur - 0.02));
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    osc.connect(g).connect(this.master);
+    osc.connect(g).connect(dest);
     osc.start(t0);
     osc.stop(t0 + dur + 0.02);
   }
 
-  noise(dur: number, opts: { vol?: number; at?: number; cutoff?: number; sweepTo?: number } = {}): void {
+  noise(
+    dur: number,
+    opts: { vol?: number; at?: number; cutoff?: number; sweepTo?: number; bus?: 'sfx' | 'music' } = {},
+  ): void {
     const ctx = this.ctx;
-    if (!ctx || !this.master) return;
+    const dest = this.out(opts.bus);
+    if (!ctx || !dest) return;
     const t0 = ctx.currentTime + (opts.at ?? 0);
     const len = Math.ceil(ctx.sampleRate * dur);
     const buf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -82,7 +116,7 @@ export class Synth {
     const g = ctx.createGain();
     g.gain.setValueAtTime(opts.vol ?? 0.3, t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    src.connect(filt).connect(g).connect(this.master);
+    src.connect(filt).connect(g).connect(dest);
     src.start(t0);
   }
 

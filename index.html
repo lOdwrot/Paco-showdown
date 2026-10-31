@@ -16,6 +16,7 @@
         <div class="menu">
           <button class="btn" data-action="single">1 PLAYER</button>
           <button class="btn" data-action="multi">MULTIPLAYER</button>
+          <button class="btn small dev" data-action="dev">DEV OPTIONS</button>
         </div>
         <div class="help">
           <p>ARROWS / WASD / SWIPE TO MOVE</p>
@@ -27,12 +28,15 @@
       <!-- Character setup -->
       <section id="screen-setup" class="screen hidden">
         <h2 id="setup-title">CHOOSE YOUR PACO</h2>
-        <label class="field">NICKNAME <input id="nick" maxlength="10" autocomplete="off" spellcheck="false" /></label>
-        <h3>PACO</h3>
-        <div id="pac-skins" class="skins"></div>
-        <div id="ghost-section">
-          <h3>GHOST</h3>
-          <div id="ghost-skins" class="skins"></div>
+        <div id="profile-slot-setup" class="profile-slot">
+          <!-- Profile editor: moved between setup and lobby by App -->
+          <div id="profile-editor">
+            <label class="field">NICKNAME <input id="nick" maxlength="10" autocomplete="off" spellcheck="false" /></label>
+            <div class="carousels">
+              <div class="carousel" data-kind="pac"></div>
+              <div class="carousel" data-kind="ghost"></div>
+            </div>
+          </div>
         </div>
         <div class="menu row" id="setup-single">
           <button class="btn" data-action="back">BACK</button>
@@ -56,9 +60,42 @@
         <div class="code-box"><span id="room-code">-----</span> <button class="btn small" data-action="copy">COPY</button></div>
         <p class="hint" id="lobby-hint">SHARE THIS CODE WITH FRIENDS</p>
         <ul id="lobby-players" class="players"></ul>
+        <h3>YOUR CHARACTER</h3>
+        <div id="profile-slot-lobby" class="profile-slot"></div>
         <div class="menu row">
           <button class="btn" data-action="leave">LEAVE</button>
           <button class="btn primary" data-action="start-multi" id="btn-start-multi">START</button>
+        </div>
+      </section>
+
+      <!-- Dev options -->
+      <section id="screen-dev" class="screen hidden">
+        <h2>DEV OPTIONS</h2>
+        <p class="hint">TEST ANY MAP OR MECHANIC (SCORES ARE NOT SAVED)</p>
+        <div class="dev-presets row">
+          <button class="btn small" data-preset="smash">WALL SMASH</button>
+          <button class="btn small" data-preset="unlock">MONSTER UNLOCK</button>
+          <button class="btn small" data-preset="clear">LEVEL CLEAR</button>
+          <button class="btn small" data-preset="power">POWER BALL</button>
+          <button class="btn small" data-preset="reset">RESET</button>
+        </div>
+        <div class="dev-grid">
+          <label>MAP <select id="dev-mapIndex"></select></label>
+          <label>LEVEL <select id="dev-level"></select></label>
+          <label>DOTS <select id="dev-dotsLeft">
+            <option value="">ALL</option><option value="50">50</option><option value="20">20</option><option value="5">5</option><option value="1">1</option>
+          </select></label>
+          <label class="check"><input type="checkbox" id="dev-monsterNow" /> PACO-MONSTER NOW (SMASH WALLS)</label>
+          <label class="check"><input type="checkbox" id="dev-monsterUnlocked" /> MONSTER UNLOCKED (4-GHOST STREAK DONE)</label>
+          <label class="check"><input type="checkbox" id="dev-powerAtStart" /> POWER BALL ACTIVE AT START</label>
+          <label class="check"><input type="checkbox" id="dev-invincible" /> INVINCIBLE</label>
+          <label class="check"><input type="checkbox" id="dev-infiniteLives" /> INFINITE LIVES</label>
+          <label class="check"><input type="checkbox" id="dev-noGhosts" /> NO GHOSTS</label>
+          <label class="check"><input type="checkbox" id="dev-skipIntro" /> SKIP INTRO</label>
+        </div>
+        <div class="menu row">
+          <button class="btn" data-action="back">BACK</button>
+          <button class="btn primary" data-action="start-dev">PLAY</button>
         </div>
       </section>
 
@@ -93,6 +130,7 @@
       </section>
 
       <div id="toast" class="hidden"></div>
+      <button id="btn-mute" title="Music & sound (M)" aria-label="Toggle sound">♪</button>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

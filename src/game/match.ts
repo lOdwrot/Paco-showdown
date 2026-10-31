@@ -18,10 +18,36 @@ export interface PlayerState extends PlayerSetup {
   connected: boolean;
 }
 
+/**
+ * Developer / testing switches (main menu → DEV OPTIONS). All default to off.
+ * They only bend the rules for the local test game; normal play never sets them.
+ */
+export interface DevOptions {
+  /** Map to start on (index into MAPS); later levels continue the rotation from it. */
+  mapIndex?: number;
+  /** Start Paco-Monster as soon as the first round begins. */
+  monsterNow?: boolean;
+  /** Pretend a 4-ghost streak already happened (clearing the board triggers the bonus). */
+  monsterUnlocked?: boolean;
+  /** Start every round with a power ball active. */
+  powerAtStart?: boolean;
+  /** Ghosts can't catch Paco. */
+  invincible?: boolean;
+  /** Dying never costs a life. */
+  infiniteLives?: boolean;
+  /** Ghosts stay in the house. */
+  noGhosts?: boolean;
+  /** Keep only this many dots (closest to Paco's spawn) on each level. */
+  dotsLeft?: number;
+  /** Replace the intro jingle freeze with the short READY! */
+  skipIntro?: boolean;
+}
+
 export interface MatchOptions {
   seed?: number;
   startLevel?: number;
   highScore?: number;
+  dev?: DevOptions;
 }
 
 /** Death animation timing inside the 'dying' phase (seconds from its start). */
@@ -55,6 +81,9 @@ export class Match {
   private seq = 0;
   private deathSoundPlayed = false;
   private seed: number;
+  readonly dev: DevOptions;
+  private readonly mapOffset: number;
+  private monsterNowPending: boolean;
 
   constructor(mode: MatchMode, setups: PlayerSetup[], opts: MatchOptions = {}) {
     if (!setups.length) throw new Error('Match needs at least one player');
@@ -65,6 +94,10 @@ export class Match {
     this.players = setups.map((s) => ({ ...s, score: 0, lives, connected: true }));
     this.pacoId = this.players[0]!.id;
     this.levelNum = opts.startLevel ?? 1;
+    this.dev = opts.dev ?? {};
+    this.mapOffset = this.dev.mapIndex !== undefined ? this.dev.mapIndex - (this.levelNum - 1) : 0;
+    this.monsterNowPending = !!this.dev.monsterNow;
+    if (this.dev.monsterUnlocked) this.lifeBestStreak = 4;
     this.level = this.createLevel();
     this.assignGhosts();
     this.startRound(true);
@@ -111,7 +144,7 @@ export class Match {
         break;
       case 'intro':
       case 'ready':
-        if (this.phaseLeft <= 0) this.setPhase('playing');
+        if (this.phaseLeft <= 0) this.beginPlay();
         break;
       case 'playing': {
         this.phaseLeft = 0;
@@ -171,7 +204,7 @@ export class Match {
       phaseLeft: r2(this.phaseLeft),
       phaseTotal: this.phaseTotal,
       level: this.levelNum,
-      mapIndex: mapForLevel(this.levelNum).index,
+      mapIndex: mapForLevel(this.levelNum, this.mapOffset).index,
       dots: encodeBits(m.dots),
       broken: [...m.broken],
       dotsLeft: L.dotsLeft,
@@ -228,11 +261,14 @@ export class Match {
   }
 
   private createLevel(): Level {
-    const { def } = mapForLevel(this.levelNum);
+    const { def } = mapForLevel(this.levelNum, this.mapOffset);
     const level = new Level(def, this.levelNum, {
       seed: this.seed + this.levelNum * 7919,
       lifeBestStreak: this.lifeBestStreak,
+      invincible: this.dev.invincible,
+      noGhosts: this.dev.noGhosts,
     });
+    if (this.dev.dotsLeft !== undefined) level.trimDots(this.dev.dotsLeft);
     level.setHooks({
       emit: (t) => this.emit(t),
       score: (pts) => {
@@ -279,11 +315,24 @@ export class Match {
 
   private startRound(first: boolean): void {
     this.caughtBy = -1;
+    const intro = first && !this.dev.skipIntro;
     if (this.mode === 'multi') {
-      this.afterReveal = first ? 'intro' : 'ready';
+      this.afterReveal = intro ? 'intro' : 'ready';
       this.setPhase('roleReveal');
     } else {
-      this.setPhase(first ? 'intro' : 'ready');
+      this.setPhase(intro ? 'intro' : 'ready');
+    }
+  }
+
+  /** READY/intro is over: start playing (and apply round-start dev switches). */
+  private beginPlay(): void {
+    this.setPhase('playing');
+    if (this.monsterNowPending) {
+      this.monsterNowPending = false;
+      this.level.lifeBestStreak = Math.max(this.level.lifeBestStreak, 4);
+      this.level.startMonster();
+    } else if (this.dev.powerAtStart) {
+      this.level.triggerPower();
     }
   }
 
@@ -314,9 +363,9 @@ export class Match {
 
   private afterDeath(): void {
     const paco = this.player(this.pacoId);
-    if (paco) paco.lives = Math.max(0, paco.lives - 1);
-    this.lifeBestStreak = 0;
-    this.level.lifeBestStreak = 0;
+    if (paco && !this.dev.infiniteLives) paco.lives = Math.max(0, paco.lives - 1);
+    this.lifeBestStreak = this.dev.monsterUnlocked ? 4 : 0;
+    this.level.lifeBestStreak = this.lifeBestStreak;
     if (this.mode === 'single') {
       if (!paco || paco.lives <= 0) return this.toGameOver();
     } else {

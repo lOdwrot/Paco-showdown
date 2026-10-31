@@ -7,7 +7,7 @@ import { isDir, type Dir } from '../game/types.ts';
  * Bump PROTOCOL_VERSION on breaking changes. Every inbound message is validated
  * by parseClientMsg / parseHostMsg – never trust the wire.
  */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 export const NICK_MAX = 10;
 
 export interface Profile {
@@ -24,6 +24,8 @@ export interface LobbyPlayer extends Profile {
 export type ClientMsg =
   | { t: 'hello'; v: number; profile: Profile }
   | { t: 'input'; dir: Dir | null }
+  /** Lobby only: change nickname / skins before the host starts. */
+  | { t: 'profile'; profile: Profile }
   | { t: 'ping'; at: number };
 
 export type HostMsg =
@@ -60,6 +62,8 @@ export function parseClientMsg(raw: unknown): ClientMsg | null {
       return typeof m.v === 'number' ? { t: 'hello', v: m.v, profile: sanitizeProfile(m.profile) } : null;
     case 'input':
       return m.dir === null || isDir(m.dir) ? { t: 'input', dir: m.dir as Dir | null } : null;
+    case 'profile':
+      return m.profile && typeof m.profile === 'object' ? { t: 'profile', profile: sanitizeProfile(m.profile) } : null;
     case 'ping':
       return typeof m.at === 'number' ? { t: 'ping', at: m.at } : null;
     default:

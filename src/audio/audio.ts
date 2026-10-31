@@ -1,6 +1,6 @@
 import type { Snapshot } from '../game/snapshot.ts';
 import type { GameEventType } from '../game/types.ts';
-import { GAME_OVER, INTRO, LEVEL_CLEAR, ROLE_STING, playSong } from './songs.ts';
+import { GAME_OVER, INTRO, LEVEL_CLEAR, MENU_THEME, MusicPlayer, ROLE_STING, playSong } from './songs.ts';
 import { Synth } from './synth.ts';
 
 /**
@@ -9,6 +9,7 @@ import { Synth } from './synth.ts';
  */
 export class GameAudio {
   readonly synth = new Synth();
+  readonly music = new MusicPlayer(this.synth);
   private lastSeq = 0;
   private waka = false;
 
@@ -23,6 +24,16 @@ export class GameAudio {
   toggleMute(): boolean {
     this.synth.setMuted(!this.synth.muted);
     localStorage.setItem('paco.muted', this.synth.muted ? '1' : '0');
+    return this.synth.muted;
+  }
+
+  /** Menu theme on/off (menus call this; starting a game stops it). */
+  menuMusic(on: boolean): void {
+    if (on) this.music.play(MENU_THEME);
+    else this.music.stop();
+  }
+
+  get muted(): boolean {
     return this.synth.muted;
   }
 

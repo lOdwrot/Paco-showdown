@@ -36,6 +36,14 @@ function watch(page, name) {
   page.on('pageerror', (e) => errors.push(`[${name}] ${e.message}`));
   page.on('console', (m) => m.type() === 'error' && errors.push(`[${name}] console: ${m.text()}`));
 }
+/** Clicks a carousel's ▶ until it shows `id`. */
+async function pick(page, kind, id) {
+  for (let i = 0; i < 12; i++) {
+    if ((await page.getAttribute(`.carousel[data-kind=${kind}]`, 'data-value')) === id) return;
+    await page.click(`.carousel[data-kind=${kind}] .arrow[data-step="1"]`);
+  }
+  throw new Error(`could not pick ${kind} ${id}`);
+}
 const snap = (page) => page.evaluate(() => window.__paco?.snapshot ?? null);
 function assert(c, msg) {
   if (!c) throw new Error(`ASSERT: ${msg}`);
@@ -55,7 +63,7 @@ try {
   await p.screenshot({ path: `${OUT}/01-title.png` });
   await p.click('[data-action=single]');
   await p.fill('#nick', 'TESTER');
-  await p.click('.skin[data-id=president]');
+  await pick(p, 'pac', 'president');
   await p.screenshot({ path: `${OUT}/02-setup.png` });
   await p.click('[data-action=start-single]');
   await sleep(1500);
@@ -71,16 +79,22 @@ try {
   assert(s.phase === 'playing' || s.phase === 'dying', `expected playing, got ${s.phase}`);
   assert(s.players[0].score > 0, 'score should increase after moving');
   await p.screenshot({ path: `${OUT}/04-playing.png` });
-  // Force a power ball + monster mode via the live match for a visual check.
-  await p.evaluate(() => {
-    const m = window.__paco.session.match;
-    m.level.lifeBestStreak = 4;
-    m.level.startMonster();
-  });
-  await sleep(1200);
-  await p.screenshot({ path: `${OUT}/05-monster.png` });
+  await p.keyboard.press('Escape');
+
+  // ---------------- dev options: any map + wall-smash test
+  await p.click('[data-action=dev]');
+  await p.screenshot({ path: `${OUT}/05a-dev-options.png` });
+  await p.click('[data-preset=smash]');
+  await p.selectOption('#dev-mapIndex', '1');
+  await p.click('[data-action=start-dev]');
+  await sleep(2400);
+  await p.keyboard.press('ArrowUp');
+  await sleep(1300);
   s = await snap(p);
-  assert(s.monsterLeft > 0 || s.phase === 'levelComplete', 'monster mode should run');
+  await p.screenshot({ path: `${OUT}/05-monster.png` });
+  assert(s.mapIndex === 1, `dev map should be 1, got ${s.mapIndex}`);
+  assert(s.monsterLeft > 0, 'dev Paco-Monster should be running');
+  assert(s.broken.length > 0, 'Paco-Monster should have smashed a wall');
   await p.close();
 
   // ---------------- phone layout (portrait + landscape): the maze must fill the screen
@@ -124,11 +138,17 @@ try {
   assert(/^[A-Z0-9]{5}$/.test(code), `bad room code ${code}`);
   await guest.click('[data-action=multi]');
   await guest.fill('#nick', 'GUESTY');
-  await guest.click('.skin[data-id=count]');
+  await pick(guest, 'ghost', 'wisp');
   await guest.fill('#join-code', code);
   await guest.click('[data-action=join]');
   await guest.waitForSelector('#screen-lobby:not(.hidden)');
   await host.waitForFunction(() => document.querySelectorAll('#lobby-players li').length === 2);
+  // Characters & nick can still change in the lobby; the host sees it live.
+  await pick(guest, 'ghost', 'count');
+  await guest.fill('#nick', 'GUESTY2');
+  await host.waitForFunction(() => document.querySelector('#lobby-players')?.textContent?.includes('GUESTY2'));
+  const hostView = await host.evaluate(() => window.__paco.room?.players?.map((p) => [p.nick, p.ghostSkin]));
+  assert(JSON.stringify(hostView).includes('["GUESTY2","count"]'), `host lobby not updated: ${JSON.stringify(hostView)}`);
   await host.screenshot({ path: `${OUT}/06-lobby.png` });
   await host.click('[data-action=start-multi]');
   await guest.waitForSelector('#screen-game:not(.hidden)');

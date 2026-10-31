@@ -16,7 +16,12 @@ is Paco. Everyone else is a ghost, sees the maze through fog of war, and tries t
   the ghost house.
 * **3 original mazes** (Paco Plaza, Neon Labyrinth, Pumpkin Fortress) that cycle.
 * **Selectable characters**: Paco, Paco-Girl, Paco-President (top hat and monocle), Paco-Punk,
-  Paco-Ninja, and Paco-Cool, plus 8 ghost skins (Count Boo, Sir Spook, Ghostbeard…).
+  Paco-Ninja, and Paco-Cool, plus 8 ghost skins (Count Boo, Sir Spook, Ghostbeard…). Pick them with ◀ ▶ arrows,
+  and change them, along with your nickname, in the lobby until the game starts.
+* **Dev options** in the main menu let you play any map or level and test mechanics instantly:
+  Paco-Monster wall smashing, the monster unlock, a level clear, power balls, invincibility, and
+  more.
+* **Menu music** (original chiptune loop). The ♪ button mutes everything.
 * Everything is generated in code: ASCII pixel-art sprites, neon wall outlines, and a WebAudio
   chiptune synth with an original intro jingle, waka, siren, and other effects.
 

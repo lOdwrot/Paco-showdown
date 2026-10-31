@@ -61,3 +61,21 @@ During the bonus, which lasts 5 s:
   around their own. Player-controlled ghosts show their nickname.
 * Disconnects: a ghost who leaves is replaced by AI. If Paco leaves, the next player takes over
   and no life is lost.
+
+## Lobby
+Until the host presses START, every player can change their nickname, Paco skin, and ghost skin
+from the lobby (client message `profile`). Everyone sees the changes live.
+
+## Dev options (testing only)
+Main menu → DEV OPTIONS. You can choose the map and level (speed), how many dots to keep, and
+toggles for:
+* Paco-Monster now (wall smashing)
+* monster unlocked
+* power ball at start
+* invincible
+* infinite lives
+* no ghosts
+* skip intro
+
+Presets: WALL SMASH, MONSTER UNLOCK, LEVEL CLEAR, POWER BALL. Dev games never save high scores
+and show a red DEV badge.

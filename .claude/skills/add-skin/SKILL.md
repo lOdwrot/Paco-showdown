@@ -17,5 +17,6 @@ description: Add a new selectable Paco or ghost skin (name, colour and pixel-art
    * An `Overlay` is `{x, y, rows: string[], pal: {char: '#rrggbb'}}`, where `.` means
      transparent.
 3. `sanitizeProfile` accepts the new id automatically, because it reads the catalog.
-4. Verify with `npm run build && npm run smoke`, then look at `screenshots/02-setup.png`. The
-   setup screen shows every skin animated.
+4. Verify with `npm run build && npm run smoke`. The setup and lobby screens use ◀ ▶ carousels
+   (`src/ui/carousel.ts`), so new skins appear there automatically. Check `screenshots/02-setup.png`
+   or step through the carousel in `npm run dev`.

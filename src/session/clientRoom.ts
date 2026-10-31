@@ -105,6 +105,11 @@ export class ClientRoom implements GameSession {
     };
   }
 
+  /** Changes nickname/skins while still in the lobby. */
+  updateProfile(profile: Profile): void {
+    if (!this.started) this.send({ t: 'profile', profile });
+  }
+
   setInput(dir: Dir | null): void {
     if (dir === this.lastDir) return;
     this.lastDir = dir;

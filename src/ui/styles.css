@@ -44,12 +44,32 @@ input { background: #000; color: var(--yellow); border: 3px solid var(--blue); p
 input:focus { outline: none; border-color: var(--yellow); }
 #join-code { width: 140px; text-align: center; letter-spacing: 4px; }
 
-.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; width: min(760px, 94vw); }
-.skin { background: #050510; border: 3px solid #222; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; color: #fff; }
-.skin canvas { width: 60px; height: 60px; }
-.skin .name { font-size: 7px; text-align: center; min-height: 18px; line-height: 1.4; }
-.skin .blurb { font-size: 6px; color: #888; text-align: center; line-height: 1.4; }
-.skin.selected { border-color: var(--yellow); box-shadow: 0 0 12px rgba(255, 230, 0, 0.5); }
+#profile-editor { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.carousels { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
+.carousel { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 250px; background: #050510; border: 3px solid #222; padding: 10px 6px; }
+.carousel.hidden { display: none; }
+.car-label { font-size: 10px; color: var(--cyan); }
+.car-row { display: flex; align-items: center; gap: 10px; }
+.car-stage { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; border: 2px solid transparent; touch-action: pan-y; }
+.car-stage:focus { outline: none; border-color: var(--yellow); }
+.car-stage canvas { width: 100px; height: 100px; }
+.arrow { background: #000; color: var(--yellow); border: 3px solid var(--blue); width: 44px; height: 44px; font-size: 16px; cursor: pointer; padding: 0; }
+.arrow:hover, .arrow:active { border-color: var(--yellow); background: #111; }
+.carousel .name { font-size: 10px; color: var(--yellow); min-height: 12px; }
+.carousel .blurb { font-size: 7px; color: #888; min-height: 9px; }
+.carousel .count { font-size: 7px; color: #555; }
+
+#btn-mute { position: fixed; top: 8px; right: 8px; z-index: 20; width: 40px; height: 40px; background: #000; border: 2px solid var(--blue); color: var(--yellow); font-size: 18px; cursor: pointer; font-family: sans-serif; }
+#btn-mute.off { color: #555; text-decoration: line-through; }
+body.in-game #btn-mute { display: none; }
+
+.btn.dev { border-color: #444; color: #999; box-shadow: none; }
+.dev-presets { gap: 8px; }
+.dev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; width: min(720px, 94vw); font-size: 9px; }
+.dev-grid label { display: flex; align-items: center; gap: 10px; color: #ddd; line-height: 1.5; }
+.dev-grid select { font-family: var(--font); font-size: 10px; background: #000; color: var(--yellow); border: 2px solid var(--blue); padding: 6px; flex: 1; }
+.dev-grid .check { grid-column: span 1; cursor: pointer; }
+.dev-grid input[type='checkbox'] { width: 18px; height: 18px; accent-color: var(--yellow); flex: none; }
 
 .code-box { display: flex; align-items: center; gap: 14px; }
 #room-code { font-size: 40px; color: var(--yellow); letter-spacing: 10px; text-shadow: 3px 3px 0 #b05000; }
@@ -114,8 +134,11 @@ input:focus { outline: none; border-color: var(--yellow); }
 @media (max-width: 760px), (max-height: 500px) {
   .screen { gap: 10px; padding: 12px 10px; }
   .btn { padding: 10px 14px; font-size: 12px; }
-  .skins { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
-  .skin canvas { width: 48px; height: 48px; }
+  .carousels { gap: 8px; }
+  .carousel { width: min(250px, 46vw); padding: 6px 2px; }
+  .car-stage, .car-stage canvas { width: 64px; height: 64px; }
+  .arrow { width: 38px; height: 38px; }
+  .dev-grid { grid-template-columns: 1fr; }
   h2 { font-size: 14px; }
   #room-code { font-size: 30px; letter-spacing: 6px; }
 }

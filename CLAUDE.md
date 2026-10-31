@@ -19,6 +19,12 @@ player is Paco and the others are ghosts, over WebRTC. The full spec is in `docs
 Run `npm run check` before every commit. After any visual or UI change, also run `npm run smoke`
 and look at the PNGs in `screenshots/`.
 
+**Dev options**: main menu → DEV OPTIONS lets you pick any map and level, and toggle mechanics
+(Paco-Monster now, monster unlocked, power at start, invincible, infinite lives, no ghosts, dots
+left, skip intro). They're implemented as `DevOptions` in `src/game/match.ts` and tested in
+`tests/dev.test.ts`. When you add a new mechanic, add a dev switch for it too (Match option +
+checkbox in `index.html` `#screen-dev` + `App.DEV_FLAGS`).
+
 Useful URL params: `?net=local` (multiplayer between tabs, no network), `?net=ws&relay=ws://host:8787`,
 and `?level=N` (start single player at level N).
 
@@ -36,8 +42,8 @@ src/game/           PURE simulation. No DOM, no audio, no Date/Math.random (seed
 src/session/        LocalSession (single), HostRoom (multi host, authoritative), ClientRoom (interpolating client)
 src/net/            transport.ts interfaces + peer (WebRTC/PeerJS), ws (relay), local (BroadcastChannel); protocol.ts validation
 src/render/         Canvas2D renderer, sprites from ASCII pixel maps, maze outline via distance transform, fog of war
-src/audio/          WebAudio synth, original jingles (songs.ts), GameAudio maps snapshot → sounds
-src/ui/             HTML/CSS screens + App (main loop). src/skins/catalog.ts = skin data.
+src/audio/          WebAudio synth, original jingles + looping MENU_THEME (songs.ts), GameAudio maps snapshot → sounds
+src/ui/             HTML/CSS screens + App (main loop); carousel.ts = ◀ ▶ character picker (setup + lobby). src/skins/catalog.ts = skin data.
 server/relay.ts     Node WebSocket relay (only routes messages)
 ```
 Data flow: `input → session.setInput → Match.step (60 Hz fixed) → Snapshot → Renderer + GameAudio`.

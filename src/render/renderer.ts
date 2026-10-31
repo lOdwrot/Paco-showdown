@@ -34,6 +34,8 @@ export interface RenderContext {
   time: number;
   dt: number;
   paused?: boolean;
+  /** Dev-options game: show a DEV badge. */
+  dev?: boolean;
 }
 
 /**
@@ -348,6 +350,7 @@ export class Renderer {
     this.text('HIGH SCORE', W / 2, 0, '#fff', 'center');
     this.text(String(s.highScore), W / 2, 9, '#fff', 'center');
     this.text(`L${s.level}`, W - 4, 0, '#fff', 'right');
+    if (rc.dev) this.text('DEV', W / 2, HUD_TOP + maze.h * TILE + 4, '#ff3030', 'center', 6);
 
     // Centre messages (below the ghost house, like the arcade).
     const h = maze.house;

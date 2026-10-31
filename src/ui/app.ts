@@ -7,6 +7,9 @@ import { type LobbyPlayer, type Profile, sanitizeNick } from '../net/protocol.ts
 import { isValidRoomCode, normalizeRoomCode } from '../net/roomCode.ts';
 import { Renderer } from '../render/renderer.ts';
 import { SPRITE, ghostFrame, pacFrame } from '../render/sprites.ts';
+import type { DevOptions } from '../game/match.ts';
+import { MAPS } from '../game/maps/index.ts';
+import { Carousel } from './carousel.ts';
 import { ClientRoom } from '../session/clientRoom.ts';
 import { HostRoom } from '../session/hostRoom.ts';
 import { LocalSession } from '../session/localSession.ts';
@@ -14,7 +17,9 @@ import type { GameSession } from '../session/types.ts';
 import { GHOST_SKINS, PAC_SKINS, ghostSkin } from '../skins/catalog.ts';
 import { loadHighScore, loadProfile, saveHighScore, saveProfile } from './storage.ts';
 
-type Screen = 'title' | 'setup' | 'lobby' | 'game' | 'over';
+type Screen = 'title' | 'setup' | 'lobby' | 'dev' | 'game' | 'over';
+const MENU_SCREENS: Screen[] = ['title', 'setup', 'lobby', 'dev'];
+const DEV_KEY = 'paco.dev';
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
 
@@ -35,6 +40,10 @@ export class App {
   private time = 0;
   private boardTimer = 0;
   private lastSnap: Snapshot | null = null;
+  private pacCarousel!: Carousel;
+  private ghostCarousel!: Carousel;
+  /** Dev options of the running/last dev game (null = normal game). */
+  private devGame: { dev: DevOptions; level: number } | null = null;
 
   constructor() {
     const canvas = $<HTMLCanvasElement>('#game');
@@ -46,7 +55,9 @@ export class App {
     // Re-fit whenever the game area changes size (rotation, address bar, side panel).
     new ResizeObserver(() => this.layout()).observe($('#canvas-box'));
     this.bindButtons();
-    this.buildSkinPickers();
+    this.buildProfileEditor();
+    this.buildDevScreen();
+    this.bindAudioControls();
     if ('ontouchstart' in window || matchMedia('(pointer: coarse)').matches) {
       $('#dpad').classList.remove('hidden');
       document.body.classList.add('touch');
@@ -68,8 +79,10 @@ export class App {
 
   show(s: Screen): void {
     this.screen = s;
-    for (const id of ['title', 'setup', 'lobby', 'game', 'over'])
+    for (const id of ['title', 'setup', 'lobby', 'dev', 'game', 'over'])
       $(`#screen-${id}`).classList.toggle('hidden', id !== s);
+    document.body.classList.toggle('in-game', s === 'game');
+    this.audio.menuMusic(MENU_SCREENS.includes(s));
     if (s === 'game') {
       this.layout();
       requestAnimationFrame(() => this.layout());
@@ -99,7 +112,7 @@ export class App {
     });
     $<HTMLInputElement>('#nick').addEventListener('input', (e) => {
       this.profile.nick = sanitizeNick((e.target as HTMLInputElement).value);
-      saveProfile(this.profile);
+      this.profileChanged();
     });
     $<HTMLInputElement>('#join-code').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') void this.action('join');
@@ -115,6 +128,12 @@ export class App {
         break;
       case 'back':
         this.show('title');
+        break;
+      case 'dev':
+        this.show('dev');
+        break;
+      case 'start-dev':
+        this.startDev();
         break;
       case 'start-single':
         this.commitNick();
@@ -143,7 +162,8 @@ export class App {
         this.quit();
         break;
       case 'again':
-        this.startSingle();
+        if (this.devGame) this.startDev();
+        else this.startSingle();
         break;
     }
   }
@@ -156,65 +176,144 @@ export class App {
   private openSetup(): void {
     const multi = this.mode === 'multi';
     $('#setup-title').textContent = multi ? 'MULTIPLAYER' : 'CHOOSE YOUR PACO';
-    $('#ghost-section').classList.toggle('hidden', !multi);
     $('#setup-single').classList.toggle('hidden', multi);
     $('#setup-multi').classList.toggle('hidden', !multi);
-    $<HTMLInputElement>('#nick').value = this.profile.nick === 'PLAYER' ? '' : this.profile.nick;
-    this.refreshSkinSelection();
+    this.mountProfileEditor('setup', multi);
     this.show('setup');
-    $<HTMLInputElement>('#nick').focus();
   }
 
-  // ---------------------------------------------------------------- skins
+  // ---------------------------------------------------------------- profile editor
 
-  private skinCanvases: { canvas: HTMLCanvasElement; kind: 'pac' | 'ghost'; id: string }[] = [];
-
-  private buildSkinPickers(): void {
-    const mk = (kind: 'pac' | 'ghost', list: readonly { id: string; name: string; blurb: string }[], host: HTMLElement) => {
-      for (const s of list) {
-        const card = document.createElement('button');
-        card.className = 'skin';
-        card.dataset.kind = kind;
-        card.dataset.id = s.id;
-        const c = document.createElement('canvas');
-        c.width = SPRITE;
-        c.height = SPRITE;
-        card.append(c);
-        card.insertAdjacentHTML('beforeend', `<span class="name">${s.name}</span><span class="blurb">${s.blurb}</span>`);
-        card.addEventListener('click', () => {
-          this.audio.unlock();
-          this.audio.play('select');
-          if (kind === 'pac') this.profile.pacSkin = s.id;
-          else this.profile.ghostSkin = s.id;
-          saveProfile(this.profile);
-          this.refreshSkinSelection();
-        });
-        host.append(card);
-        this.skinCanvases.push({ canvas: c, kind, id: s.id });
-      }
+  private buildProfileEditor(): void {
+    this.pacCarousel = new Carousel($('.carousel[data-kind=pac]'), 'pac', PAC_SKINS, 'PACO');
+    this.ghostCarousel = new Carousel($('.carousel[data-kind=ghost]'), 'ghost', GHOST_SKINS, 'GHOST');
+    const changed = () => {
+      this.audio.unlock();
+      this.audio.play('select');
+      this.profile.pacSkin = this.pacCarousel.value;
+      this.profile.ghostSkin = this.ghostCarousel.value;
+      this.profileChanged();
     };
-    mk('pac', PAC_SKINS, $('#pac-skins'));
-    mk('ghost', GHOST_SKINS, $('#ghost-skins'));
+    this.pacCarousel.onChange = changed;
+    this.ghostCarousel.onChange = changed;
   }
 
-  private refreshSkinSelection(): void {
-    document.querySelectorAll<HTMLElement>('.skin').forEach((el) => {
-      const sel = el.dataset.kind === 'pac' ? this.profile.pacSkin : this.profile.ghostSkin;
-      el.classList.toggle('selected', el.dataset.id === sel);
-    });
+  /** Moves the single nick + carousels editor into the setup or lobby screen. */
+  private mountProfileEditor(where: 'setup' | 'lobby', showGhost: boolean): void {
+    $(`#profile-slot-${where}`).append($('#profile-editor'));
+    this.pacCarousel.set(this.profile.pacSkin);
+    this.ghostCarousel.set(this.profile.ghostSkin);
+    this.ghostCarousel.el.classList.toggle('hidden', !showGhost);
+    $<HTMLInputElement>('#nick').value = this.profile.nick === 'PLAYER' ? '' : this.profile.nick;
   }
 
-  private drawSkinPreviews(): void {
-    const dirs: Dir[] = ['right', 'down', 'left', 'up'];
-    for (const s of this.skinCanvases) {
-      const ctx = s.canvas.getContext('2d')!;
-      ctx.clearRect(0, 0, SPRITE, SPRITE);
-      const img =
-        s.kind === 'pac'
-          ? pacFrame(s.id, Math.floor(this.time * 8) % 4)
-          : ghostFrame(s.id, 'normal', dirs[Math.floor(this.time / 1.2) % 4]!, Math.floor(this.time * 6));
-      ctx.drawImage(img, 0, 0);
+  /** Saves the profile and, while in a lobby, sends it to the room. */
+  private profileChanged(): void {
+    saveProfile(this.profile);
+    if (this.screen === 'lobby' && this.room) this.room.updateProfile(this.profile);
+  }
+
+  // ---------------------------------------------------------------- dev options
+
+  private static readonly DEV_FLAGS = [
+    'monsterNow',
+    'monsterUnlocked',
+    'powerAtStart',
+    'invincible',
+    'infiniteLives',
+    'noGhosts',
+    'skipIntro',
+  ] as const;
+
+  private buildDevScreen(): void {
+    const map = $<HTMLSelectElement>('#dev-mapIndex');
+    MAPS.forEach((m, i) => map.add(new Option(m.name.toUpperCase(), String(i))));
+    const lvl = $<HTMLSelectElement>('#dev-level');
+    for (let i = 1; i <= 20; i++) lvl.add(new Option(String(i), String(i)));
+    this.writeDevForm(this.loadDev());
+    $('#screen-dev').addEventListener('change', () => this.saveDev(this.readDevForm()));
+    const presets: Record<string, Partial<DevOptions>> = {
+      smash: { monsterNow: true, invincible: true },
+      unlock: { monsterUnlocked: true, dotsLeft: 5 },
+      clear: { dotsLeft: 1 },
+      power: { powerAtStart: true, infiniteLives: true },
+      reset: { skipIntro: false },
+    };
+    document.querySelectorAll<HTMLButtonElement>('[data-preset]').forEach((b) =>
+      b.addEventListener('click', () => {
+        this.audio.unlock();
+        this.audio.play('select');
+        const cur = this.readDevForm();
+        const next = {
+          level: b.dataset.preset === 'reset' ? 1 : cur.level,
+          dev: { mapIndex: cur.dev.mapIndex, skipIntro: true, ...presets[b.dataset.preset!] },
+        };
+        this.writeDevForm(next);
+        this.saveDev(next);
+      }),
+    );
+  }
+
+  private readDevForm(): { dev: DevOptions; level: number } {
+    const dev: DevOptions = { mapIndex: Number($<HTMLSelectElement>('#dev-mapIndex').value) };
+    const dots = $<HTMLSelectElement>('#dev-dotsLeft').value;
+    if (dots) dev.dotsLeft = Number(dots);
+    for (const f of App.DEV_FLAGS) if ($<HTMLInputElement>(`#dev-${f}`).checked) dev[f] = true;
+    return { dev, level: Number($<HTMLSelectElement>('#dev-level').value) || 1 };
+  }
+
+  private writeDevForm(v: { dev: DevOptions; level: number }): void {
+    $<HTMLSelectElement>('#dev-mapIndex').value = String(v.dev.mapIndex ?? 0);
+    $<HTMLSelectElement>('#dev-level').value = String(v.level);
+    $<HTMLSelectElement>('#dev-dotsLeft').value = v.dev.dotsLeft !== undefined ? String(v.dev.dotsLeft) : '';
+    for (const f of App.DEV_FLAGS) $<HTMLInputElement>(`#dev-${f}`).checked = !!v.dev[f];
+  }
+
+  private loadDev(): { dev: DevOptions; level: number } {
+    try {
+      const v = JSON.parse(localStorage.getItem(DEV_KEY) ?? 'null');
+      if (v && typeof v === 'object' && v.dev) return v;
+    } catch {
+      /* ignore */
     }
+    return { dev: { mapIndex: 0 }, level: 1 };
+  }
+
+  private saveDev(v: { dev: DevOptions; level: number }): void {
+    localStorage.setItem(DEV_KEY, JSON.stringify(v));
+  }
+
+  private startDev(): void {
+    this.devGame = this.readDevForm();
+    this.saveDev(this.devGame);
+    this.room = null;
+    this.startGame(
+      new LocalSession(this.profile, { highScore: 0, startLevel: this.devGame.level, dev: this.devGame.dev }),
+    );
+  }
+
+  // ---------------------------------------------------------------- audio controls
+
+  private syncMuteButton: () => void = () => {};
+
+  private bindAudioControls(): void {
+    const btn = $('#btn-mute');
+    const sync = () => btn.classList.toggle('off', this.audio.muted);
+    sync();
+    this.syncMuteButton = sync;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.audio.unlock();
+      this.audio.toggleMute();
+      sync();
+    });
+    // Browsers only allow audio after a user gesture: (re)start menu music on gestures.
+    const gesture = () => {
+      this.audio.unlock();
+      this.audio.menuMusic(MENU_SCREENS.includes(this.screen));
+    };
+    window.addEventListener('pointerdown', gesture);
+    window.addEventListener('keydown', gesture);
   }
 
   // ---------------------------------------------------------------- games
@@ -223,6 +322,7 @@ export class App {
     const params = new URLSearchParams(location.search);
     const startLevel = Math.max(1, Number(params.get('level') ?? 1) || 1);
     this.room = null;
+    this.devGame = null;
     this.startGame(new LocalSession(this.profile, { highScore: loadHighScore(), startLevel }));
   }
 
@@ -246,6 +346,7 @@ export class App {
       $('#lobby-hint').textContent = 'SHARE THIS CODE WITH FRIENDS (MAX 5 PLAYERS)';
       $('#btn-start-multi').classList.remove('hidden');
       this.renderLobby(room.players, room.myId);
+      this.mountProfileEditor('lobby', true);
       this.show('lobby');
       $('#toast').classList.add('hidden');
     } catch (e) {
@@ -272,6 +373,7 @@ export class App {
       $('#lobby-hint').textContent = 'WAITING FOR HOST TO START...';
       $('#btn-start-multi').classList.add('hidden');
       this.renderLobby([], '');
+      this.mountProfileEditor('lobby', true);
       this.show('lobby');
       $('#toast').classList.add('hidden');
     } catch (e) {
@@ -302,6 +404,7 @@ export class App {
   }
 
   quit(dispose = true): void {
+    this.devGame = null;
     if (dispose) {
       if (this.room) this.room.dispose();
       else this.session?.dispose();
@@ -313,7 +416,7 @@ export class App {
   }
 
   private gameOver(s: Snapshot): void {
-    saveHighScore(Math.max(...s.players.map((p) => (s.mode === 'single' || p.id === this.session?.myId ? p.score : 0))));
+    if (!this.devGame) saveHighScore(Math.max(...s.players.map((p) => (s.mode === 'single' || p.id === this.session?.myId ? p.score : 0))));
     const ol = $('#final');
     ol.innerHTML = '';
     [...s.players]
@@ -325,12 +428,16 @@ export class App {
         ol.append(li);
       });
     $('#btn-again').classList.toggle('hidden', s.mode !== 'single');
+    $('#btn-again').textContent = this.devGame ? 'RETRY' : 'PLAY AGAIN';
     this.audio.stop();
     this.show('over');
   }
 
   private onKey(code: string): void {
-    if (code === 'KeyM') this.audio.toggleMute();
+    if (code === 'KeyM' && document.activeElement?.tagName !== 'INPUT') {
+      this.audio.toggleMute();
+      this.syncMuteButton();
+    }
     if (this.screen !== 'game' || !this.session) return;
     if (code === 'KeyP' && this.session instanceof LocalSession) this.session.paused = !this.session.paused;
     if (code === 'Escape') this.quit();
@@ -349,7 +456,10 @@ export class App {
     if (dt <= 0) return;
     this.time += dt;
     if (this.screen === 'title') this.drawAttract();
-    if (this.screen === 'setup') this.drawSkinPreviews();
+    if (this.screen === 'setup' || this.screen === 'lobby') {
+      this.pacCarousel.draw(this.time);
+      this.ghostCarousel.draw(this.time);
+    }
     const s = this.session;
     if (!s || this.screen !== 'game') return;
     s.setInput(this.input.dir);
@@ -359,7 +469,7 @@ export class App {
     this.lastSnap = snap;
     if (document.hidden) return;
     const paused = s instanceof LocalSession && s.paused;
-    this.renderer.render(snap, { myId: s.myId, time: this.time, dt: paused ? 0 : dt, paused });
+    this.renderer.render(snap, { myId: s.myId, time: this.time, dt: paused ? 0 : dt, paused, dev: !!this.devGame });
     if (paused) this.audio.stop();
     else this.audio.update(snap);
     this.boardTimer -= dt;

@@ -68,6 +68,14 @@ export class HostRoom implements GameSession {
         this.lobbyChanged();
         break;
       }
+      case 'profile': {
+        const p = this.players.find((pl) => pl.id === peer);
+        if (p && !this.match) {
+          Object.assign(p, msg.profile);
+          this.lobbyChanged();
+        }
+        break;
+      }
       case 'input':
         this.match?.setInput(peer, msg.dir);
         break;
@@ -97,7 +105,9 @@ export class HostRoom implements GameSession {
     this.onLobbyChange(this.players);
   }
 
-  updateProfile(profile: Profile) {
+  /** Host changes their own character/nick in the lobby. */
+  updateProfile(profile: Profile): void {
+    if (this.match) return;
     Object.assign(this.players[0]!, profile);
     this.lobbyChanged();
   }

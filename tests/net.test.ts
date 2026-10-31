@@ -23,6 +23,10 @@ describe('protocol', () => {
     expect(parseClientMsg(null)).toBeNull();
     expect(parseClientMsg({ t: 'input', dir: 'sideways' })).toBeNull();
     expect(parseClientMsg({ t: 'input', dir: 'up' })).toEqual({ t: 'input', dir: 'up' });
+    expect(parseClientMsg({ t: 'profile', profile: { nick: 'x', pacSkin: 'girl', ghostSkin: '??' } })).toEqual({
+      t: 'profile',
+      profile: { nick: 'X', pacSkin: 'girl', ghostSkin: 'blaze' },
+    });
     const h = parseClientMsg({ t: 'hello', v: 1, profile: { nick: '<script>evil</script>long', pacSkin: 'nope' } });
     expect(h).toMatchObject({ t: 'hello', profile: { pacSkin: 'classic', ghostSkin: 'blaze' } });
     expect(sanitizeNick('')).toBe('PLAYER');
@@ -43,6 +47,14 @@ describe('multiplayer over local transport', () => {
     await until(() => host.players.length === 3 && c2.players.length === 3);
     expect(c1.myId).not.toBe('');
     expect(c1.players.map((p) => p.nick)).toEqual(['HOST', 'ANA', 'BOB']);
+
+    // Lobby: players can still change nickname / characters.
+    c2.updateProfile({ nick: 'BOBBY', pacSkin: 'ninja', ghostSkin: 'sirspook' });
+    host.updateProfile({ nick: 'BOSS', pacSkin: 'president', ghostSkin: 'count' });
+    await until(() => c1.players.some((p) => p.nick === 'BOBBY') && c1.players[0]!.nick === 'BOSS');
+    expect(host.players.find((p) => p.nick === 'BOBBY')).toMatchObject({ pacSkin: 'ninja', ghostSkin: 'sirspook' });
+    c2.updateProfile({ nick: 'BOB', pacSkin: 'punk', ghostSkin: 'pirate' });
+    await until(() => host.players.some((p) => p.nick === 'BOB'));
 
     host.start();
     await until(() => c1.started && c2.started && !!c1.view());
