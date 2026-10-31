@@ -36,7 +36,7 @@ mute, **Esc** menu.
 npm run check        # typecheck + unit tests + build
 npm run smoke        # headless browser playthrough (after build), screenshots in ./screenshots
 ```
-Pushing to `main` deploys `dist/` to GitHub Pages (enable Pages → "GitHub Actions" in repo settings).
+Every push to the game branch (or `main`) runs CI and, if it passes, publishes the build to GitHub Pages: https://lodwrot.github.io/Paco-showdown/ (Settings → Pages → Source must be "GitHub Actions").
 
 Docs: [plan & research](docs/PLAN.md) · [rules](docs/GAME_RULES.md) · [maps](docs/MAP_FORMAT.md) ·
 [networking](docs/NETWORKING.md) · [architecture](docs/ARCHITECTURE.md). For AI assistants: [CLAUDE.md](CLAUDE.md).

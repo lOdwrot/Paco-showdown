@@ -1,13 +1,23 @@
-name: CI
+name: CI & Deploy
+
+# Every push: typecheck, unit tests, build, headless smoke test.
+# Pushes to the game branch (or main) then publish the build to GitHub Pages,
+# but only if all checks passed. Requires Settings → Pages → Source = "GitHub Actions".
 on:
   push:
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -21,3 +31,27 @@ jobs:
         with:
           name: screenshots
           path: screenshots/
+      # Production build (WebRTC multiplayer) packaged for Pages.
+      - run: npm run build
+        env:
+          VITE_NET: peer
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/claude/paco-showdown-game-i1rjn7' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
