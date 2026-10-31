@@ -93,6 +93,10 @@ body.in-game #btn-mute { display: none; }
 #scoreboard .lives { color: var(--yellow); }
 #side-help { margin-top: auto; font-size: 7px; color: #666; line-height: 1.8; }
 #side-help p { margin: 0; }
+#btn-exit { margin-top: 4px; }
+@media (max-width: 760px), (pointer: coarse) {
+  #btn-exit { position: fixed; bottom: 14px; left: 14px; z-index: 5; margin: 0; padding: 6px 10px; font-size: 8px; }
+}
 
 #dpad { position: fixed; bottom: 14px; right: 14px; display: grid; grid-template-columns: repeat(3, 54px); grid-template-rows: repeat(3, 54px); }
 #dpad button { background: rgba(42, 60, 255, 0.35); border: 2px solid var(--blue); color: #fff; font-size: 18px; }

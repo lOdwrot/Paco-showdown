@@ -73,6 +73,22 @@ export class App {
       if (document.hidden) this.tick(performance.now());
     }, 250);
     requestAnimationFrame((t) => this.frame(t));
+    this.joinFromUrl();
+  }
+
+  /** Share link `?room=CODE`: joins that room right away with the saved profile. */
+  private joinFromUrl(): void {
+    const params = new URLSearchParams(location.search);
+    const code = normalizeRoomCode(params.get('room') ?? '');
+    if (!isValidRoomCode(code)) return;
+    this.mode = 'multi';
+    this.openSetup();
+    $<HTMLInputElement>('#join-code').value = code;
+    // Drop the param so a refresh / later "MENU" doesn't re-trigger it.
+    const u = new URL(location.href);
+    u.searchParams.delete('room');
+    history.replaceState(null, '', u.toString());
+    void this.join();
   }
 
   // ---------------------------------------------------------------- screens
@@ -151,6 +167,14 @@ export class App {
         void navigator.clipboard?.writeText($('#room-code').textContent ?? '');
         this.toast('CODE COPIED');
         break;
+      case 'copy-link': {
+        const u = new URL(location.href);
+        u.hash = '';
+        u.searchParams.set('room', $('#room-code').textContent ?? '');
+        void navigator.clipboard?.writeText(u.toString());
+        this.toast('LINK COPIED');
+        break;
+      }
       case 'start-multi':
         if (this.room instanceof HostRoom) {
           this.room.start({ highScore: loadHighScore() });
