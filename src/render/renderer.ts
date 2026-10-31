@@ -25,6 +25,7 @@ interface Particle {
   vy: number;
   life: number;
   color: string;
+  size: number;
 }
 
 export interface RenderContext {
@@ -108,10 +109,19 @@ export class Renderer {
   private spawnDebris(maze: Maze, cell: number, color: string) {
     const cx = (cell % maze.w) * TILE + 4;
     const cy = HUD_TOP + Math.floor(cell / maze.w) * TILE + 4;
-    for (let i = 0; i < 10; i++) {
+    const colors = [color, color, '#ffffff', '#ffd23f', '#ff9a3c'];
+    for (let i = 0; i < 28; i++) {
       const a = Math.random() * Math.PI * 2;
-      const v = 20 + Math.random() * 60;
-      this.particles.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.6, color });
+      const v = 25 + Math.random() * 90;
+      this.particles.push({
+        x: cx + (Math.random() - 0.5) * 6,
+        y: cy + (Math.random() - 0.5) * 6,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v - 25,
+        life: 0.5 + Math.random() * 0.6,
+        color: colors[i % colors.length]!,
+        size: Math.random() < 0.35 ? 2 : 1,
+      });
     }
   }
 
@@ -283,7 +293,7 @@ export class Renderer {
       q.y += q.vy * dt;
       q.vy += 120 * dt;
       ctx.fillStyle = q.color;
-      ctx.fillRect(Math.round(q.x), Math.round(q.y), 1, 1);
+      ctx.fillRect(Math.round(q.x), Math.round(q.y), q.size, q.size);
     }
   }
 

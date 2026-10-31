@@ -30,10 +30,12 @@ export const GHOST_COUNT = 4;
 /** Frightened time by level (seconds), original table; clamped to >= FRIGHT_MIN. */
 export const FRIGHT_TABLE = [6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1, 0];
 export const FRIGHT_MIN = 1;
+/** Extra seconds added on top of the original arcade table. */
+export const FRIGHT_BONUS = 5;
 export const FRIGHT_FLASH_TIME = 2; // flash during the last N seconds
 export function frightTime(level: number): number {
   const v = FRIGHT_TABLE[Math.min(level - 1, FRIGHT_TABLE.length - 1)] ?? 0;
-  return Math.max(FRIGHT_MIN, v);
+  return Math.max(FRIGHT_MIN, v) + FRIGHT_BONUS;
 }
 
 /** Speed factors relative to BASE_SPEED by level (Dossier table: L1, L2-4, L5+). */
@@ -70,9 +72,9 @@ export const PHASE = {
 } as const;
 
 export const MONSTER = {
-  duration: 5,
+  duration: 10,
   scale: 2,
-  smashSpeedFactor: 0.5,
+  smashSpeedFactor: 0.65, // was 0.5: slightly faster while eating walls
   minStreakToUnlock: 4,
 } as const;
 
