@@ -23,8 +23,6 @@ jobs:
           node-version: 22
           cache: npm
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - run: npm ci
       # Production build uses WebRTC (PeerJS) multiplayer by default.
       - run: npm run build
