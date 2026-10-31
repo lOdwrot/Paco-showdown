@@ -28,6 +28,15 @@ checkbox in `index.html` `#screen-dev` + `App.DEV_FLAGS`).
 Useful URL params: `?net=local` (multiplayer between tabs, no network), `?net=ws&relay=ws://host:8787`,
 and `?level=N` (start single player at level N).
 
+## Release workflow (standing rule)
+Every finished feature or fix is **merged to `main` automatically, without asking**, so it gets
+published to GitHub Pages (the `CI & Deploy` workflow deploys on every push to `main` once
+`npm run check` and the smoke test pass). Steps:
+1. `npm run check` (plus `npm run smoke` for visual/UI changes) must pass first.
+2. Commit, then merge/fast-forward into `main` and `git push origin main`. Also keep the
+   designated working branch in sync if the session specifies one.
+3. Do not open a PR unless asked. Never merge work that fails checks.
+
 ## Architecture (read before changing things)
 ```
 src/config.ts       ALL tunables (speeds, timers, scores). Never hard-code numbers elsewhere.
