@@ -1,7 +1,7 @@
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: [main]
+    branches: [main, claude/paco-showdown-game-i1rjn7]
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,8 +22,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - run: npm ci
+      # Production build uses WebRTC (PeerJS) multiplayer by default.
       - run: npm run build
+        env:
+          VITE_NET: peer
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
