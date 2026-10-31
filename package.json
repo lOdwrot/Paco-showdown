@@ -1,0 +1,30 @@
+{
+  "name": "paco-showdown",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Paco Showdown – a multiplayer maze-chase game for the browser",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "node scripts/smoke.mjs",
+    "relay": "node server/relay.ts",
+    "check": "npm run typecheck && npm run test && npm run build"
+  },
+  "dependencies": {
+    "@fontsource/press-start-2p": "^5.2.5",
+    "peerjs": "^1.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.0",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.0",
+    "ws": "^8.18.0"
+  }
+}
