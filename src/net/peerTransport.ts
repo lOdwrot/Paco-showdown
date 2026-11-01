@@ -1,4 +1,4 @@
-import type { DataConnection, Peer as PeerType } from 'peerjs';
+import { util, type DataConnection, type Peer as PeerType } from 'peerjs';
 import { Listeners, type ClientTransport, type HostTransport, type NetFactory } from './transport.ts';
 import { makeRoomCode } from './roomCode.ts';
 
@@ -15,9 +15,29 @@ async function loadPeer(): Promise<typeof PeerType> {
   return mod.Peer;
 }
 
+/** How long a joiner keeps retrying while the broker says the room isn't registered (yet). */
+const JOIN_RETRIES = 5;
+const JOIN_RETRY_MS = 1500;
+const JOIN_TIMEOUT_MS = 25000;
+
+/** Delay before the n-th (0-based) attempt to get a dropped broker connection back. */
+export function reconnectDelay(n: number): number {
+  return Math.min(5000, 500 * 2 ** n);
+}
+
 function peerOptions(): Record<string, unknown> {
   const env = import.meta.env ?? {};
   const opts: Record<string, unknown> = { debug: 1 };
+  // Optional TURN relay for strict mobile-carrier NATs (PeerJS's built-in defaults stay in place).
+  if (env.VITE_TURN_URL) {
+    opts.config = {
+      ...util.defaultConfig,
+      iceServers: [
+        ...util.defaultConfig.iceServers,
+        { urls: env.VITE_TURN_URL, username: env.VITE_TURN_USER, credential: env.VITE_TURN_PASS },
+      ],
+    };
+  }
   if (env.VITE_PEER_HOST) {
     opts.host = env.VITE_PEER_HOST;
     opts.port = Number(env.VITE_PEER_PORT ?? 443);
@@ -49,10 +69,38 @@ class PeerHost implements HostTransport {
       conn.on('close', drop);
       conn.on('error', drop);
     });
-    // Keep the broker connection alive so new players can still join.
-    peer.on('disconnected', () => {
-      if (!peer.destroyed) peer.reconnect();
-    });
+    // Keep the room registered with the broker, otherwise joiners get "Room not found".
+    // Mobile connections drop the signalling socket often (network switch, app in the
+    // background while the code is shared), so retry until it is back.
+    let attempt = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const revive = () => {
+      if (peer.destroyed || !peer.disconnected || timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        if (peer.destroyed || !peer.disconnected) return;
+        attempt++;
+        try {
+          peer.reconnect();
+        } catch {
+          /* retried below */
+        }
+        revive();
+      }, reconnectDelay(attempt));
+    };
+    peer.on('open', () => (attempt = 0));
+    peer.on('disconnected', revive);
+    // Errors while reconnecting (e.g. id still held by the broker) are retried, not fatal.
+    peer.on('error', revive);
+    const wake = () => {
+      attempt = 0;
+      if (timer) clearTimeout(timer);
+      timer = null;
+      if (!peer.destroyed && peer.disconnected) peer.reconnect();
+      revive();
+    };
+    window.addEventListener('online', wake);
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && wake());
   }
   send(peerId: string, msg: unknown) {
     const c = this.conns.get(peerId);
@@ -138,17 +186,26 @@ export const peerFactory: NetFactory = {
         peer.destroy();
         reject(new Error(msg));
       };
-      const timer = setTimeout(() => fail('Timed out connecting to room'), 15000);
-      peer.once('error', (e: { type?: string }) =>
-        fail(e.type === 'peer-unavailable' ? 'Room not found' : `Connection failed (${e.type ?? 'network'})`),
+      const timer = setTimeout(
+        () => fail('Timed out connecting – check both phones have a good connection and try again'),
+        JOIN_TIMEOUT_MS,
       );
-      peer.once('open', () => {
+      let tries = 0;
+      const connect = () => {
         const conn = peer.connect(ID_PREFIX + code, { reliable: true, serialization: 'json' });
         conn.once('open', () => {
           clearTimeout(timer);
           resolve(new PeerClient(peer, conn));
         });
+      };
+      // "peer-unavailable" can be transient: the host's signalling link may be re-establishing.
+      peer.on('error', (e: { type?: string }) => {
+        if (e.type === 'peer-unavailable') {
+          if (++tries <= JOIN_RETRIES) setTimeout(() => !peer.destroyed && connect(), JOIN_RETRY_MS);
+          else fail('Room not found – check the code and that the host is still in the lobby');
+        } else fail(`Connection failed (${e.type ?? 'network'})`);
       });
+      peer.once('open', connect);
     });
   },
 };

@@ -22,8 +22,11 @@ Pick the transport at runtime with `?net=peer|ws|local`, or at build time with `
   cloud broker by default. To self-host it (`npx peerjs --port 9000`), set `VITE_PEER_HOST`,
   `VITE_PEER_PORT`, `VITE_PEER_PATH`, and `VITE_PEER_SECURE`.
 * Data channels are reliable and use JSON serialisation.
-* Strict NATs may need a TURN server. Add one to the `config.iceServers` option in
-  `peerTransport.ts`.
+* **Mobile networks**: the host keeps retrying the signalling connection (backoff, plus on
+  `online`/tab-visible events) so the room stays registered; joiners retry "peer-unavailable" for
+  ~7 s before showing "Room not found". PeerJS's default STUN/TURN servers are used. For strict
+  carrier NATs set `VITE_TURN_URL`, `VITE_TURN_USER`, `VITE_TURN_PASS` at build time to add your own
+  TURN relay.
 
 ### Switching to a WebSocket server
 1. Run `npm run relay` (Node, `ws`, `PORT` env var, default 8787) somewhere reachable.

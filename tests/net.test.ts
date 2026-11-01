@@ -102,3 +102,10 @@ describe('multiplayer over the WebSocket relay', () => {
     await expect(f.join('NOPE1')).rejects.toThrow('Room not found');
   });
 });
+
+describe('peer reconnect backoff', () => {
+  it('grows and is capped', async () => {
+    const { reconnectDelay } = await import('../src/net/peerTransport.ts');
+    expect([0, 1, 2, 3, 10].map(reconnectDelay)).toEqual([500, 1000, 2000, 4000, 5000]);
+  });
+});
