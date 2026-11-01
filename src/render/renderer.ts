@@ -365,8 +365,15 @@ export class Renderer {
       this.text(me.nick, 4, 0, me.role === 'paco' ? '#ffe600' : ghostSkin(me.ghostSkin).body);
       this.text(String(me.score), 4, 9, '#fff');
     }
-    this.text('HIGH SCORE', W / 2, 0, '#fff', 'center');
-    this.text(String(s.highScore), W / 2, 9, '#fff', 'center');
+    if (s.mode === 'hunt') {
+      const left = Math.max(0, s.huntLeft);
+      const col = left <= 10 && blink ? '#ff2020' : '#ffe600';
+      this.text('TIME', W / 2, 0, '#fff', 'center');
+      this.text(String(Math.ceil(left)), W / 2, 9, col, 'center');
+    } else {
+      this.text('HIGH SCORE', W / 2, 0, '#fff', 'center');
+      this.text(String(s.highScore), W / 2, 9, '#fff', 'center');
+    }
     this.text(`L${s.level}`, W - 4, 0, '#fff', 'right');
     if (rc.dev) this.text('DEV', W / 2, HUD_TOP + maze.h * TILE + 4, '#ff3030', 'center', 6);
 
@@ -375,7 +382,8 @@ export class Renderer {
     const msgY = HUD_TOP + (h.y1 + 2) * TILE + 1;
     if (s.phase === 'intro' || s.phase === 'ready') this.text('READY!', W / 2, msgY, '#ffe600', 'center');
     if (s.phase === 'intro' && s.mode === 'single') this.text('PLAYER ONE', W / 2, HUD_TOP + (h.y0 - 3) * TILE + 1, '#00ffff', 'center');
-    if (s.phase === 'gameOver') this.text('GAME  OVER', W / 2, msgY, '#ff2020', 'center');
+    if (s.mode === 'hunt' && s.phase === 'dying') this.text('CAUGHT!', W / 2, msgY, '#00ff80', 'center');
+    if (s.phase === 'gameOver') this.text(s.mode === 'hunt' && s.huntLeft > 0 ? 'PACO CAUGHT' : s.mode === 'hunt' ? 'TIME  UP' : 'GAME  OVER', W / 2, msgY, '#ff2020', 'center');
     if (rc.paused) this.text('PAUSED', W / 2, msgY, '#00ffff', 'center');
     if (s.monsterLeft > 0) {
       const col = Math.floor(rc.time * 8) % 2 ? '#ff8a00' : '#ffe600';
@@ -388,7 +396,7 @@ export class Renderer {
     // Bottom: lives + map name.
     const by = HUD_TOP + maze.h * TILE + 2;
     const pacoPlayer = s.players.find((p) => p.role === 'paco');
-    const lifeOwner = s.mode === 'single' ? me : pacoPlayer;
+    const lifeOwner = s.mode === 'single' ? me : s.mode === 'hunt' ? undefined : pacoPlayer;
     if (lifeOwner) {
       const extra = s.mode === 'single' && s.phase !== 'intro' ? lifeOwner.lives - 1 : lifeOwner.lives;
       for (let i = 0; i < Math.max(0, extra); i++) {
@@ -420,7 +428,7 @@ export class Renderer {
     const name = role === 'paco' ? pacSkin(me.pacSkin).name : `${ghostSkin(s.ghosts[me.slot]?.skin ?? me.ghostSkin).name} GHOST`;
     const color = role === 'paco' ? '#ffe600' : ghostSkin(s.ghosts[me.slot]?.skin ?? me.ghostSkin).body;
     this.text(name, W / 2, cy + 50, color, 'center', 8);
-    const hint = role === 'paco' ? 'EAT ALL DOTS!' : 'CATCH PACO! +1000';
+    const hint = role === 'paco' ? 'EAT ALL DOTS!' : s.mode === 'hunt' ? 'CATCH PACO IN 90 SECONDS!' : 'CATCH PACO! +1000';
     this.text(hint, W / 2, cy + 66, '#fff', 'center', 6);
     this.text(String(Math.ceil(s.phaseLeft)), W / 2, H - 40, '#888', 'center', 10);
   }

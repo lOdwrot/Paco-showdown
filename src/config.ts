@@ -79,6 +79,13 @@ export const MONSTER = {
   shakeTime: 0.3, // seconds for the shake to die down
 } as const;
 
+/** Ghost Hunt (single player as a ghost, AI Paco). */
+export const HUNT = {
+  duration: 90, // seconds to catch Paco
+  perSecond: 100, // points per remaining second when Paco is caught
+  catchBonus: 500, // points for catching Paco
+} as const;
+
 /** Collision radius in tiles between Paco and a ghost (scaled by Paco's size). */
 export const COLLIDE_DIST = 0.6;
 

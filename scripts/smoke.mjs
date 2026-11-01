@@ -81,6 +81,18 @@ try {
   await p.screenshot({ path: `${OUT}/04-playing.png` });
   await p.keyboard.press('Escape');
 
+  // ---------------- ghost hunt: play as a ghost against AI Paco
+  await p.click('[data-action=hunt]');
+  await p.click('[data-action=start-single]');
+  await sleep(1000);
+  await p.screenshot({ path: `${OUT}/04a-hunt-reveal.png` });
+  await sleep(8500);
+  s = await snap(p);
+  assert(s.mode === 'hunt' && s.phase === 'playing', `expected hunt playing, got ${s.mode}/${s.phase}`);
+  assert(s.huntLeft > 0 && s.huntLeft < 90, `hunt timer should run, got ${s.huntLeft}`);
+  await p.screenshot({ path: `${OUT}/04b-hunt.png` });
+  await p.keyboard.press('Escape');
+
   // ---------------- dev options: any map + wall-smash test
   await p.click('[data-action=dev]');
   await p.screenshot({ path: `${OUT}/05a-dev-options.png` });

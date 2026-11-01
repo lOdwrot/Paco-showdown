@@ -33,7 +33,7 @@ export class App {
   readonly renderer: Renderer;
   readonly input: Input;
   profile: Profile = loadProfile();
-  mode: 'single' | 'multi' = 'single';
+  mode: 'single' | 'multi' | 'hunt' = 'single';
   screen: Screen = 'title';
   session: GameSession | null = null;
   private room: HostRoom | ClientRoom | null = null;
@@ -143,6 +143,7 @@ export class App {
     switch (a) {
       case 'single':
       case 'multi':
+      case 'hunt':
         this.mode = a;
         this.openSetup();
         break;
@@ -157,7 +158,7 @@ export class App {
         break;
       case 'start-single':
         this.commitNick();
-        this.startSingle();
+        this.startSingle(this.mode === 'hunt');
         break;
       case 'host':
         this.commitNick();
@@ -191,7 +192,7 @@ export class App {
         break;
       case 'again':
         if (this.devGame) this.startDev();
-        else this.startSingle();
+        else this.startSingle(this.mode === 'hunt');
         break;
     }
   }
@@ -203,10 +204,12 @@ export class App {
 
   private openSetup(): void {
     const multi = this.mode === 'multi';
-    $('#setup-title').textContent = multi ? 'MULTIPLAYER' : 'CHOOSE YOUR PACO';
+    const hunt = this.mode === 'hunt';
+    $('#setup-title').textContent = multi ? 'MULTIPLAYER' : hunt ? 'CHOOSE YOUR GHOST' : 'CHOOSE YOUR PACO';
     $('#setup-single').classList.toggle('hidden', multi);
     $('#setup-multi').classList.toggle('hidden', !multi);
-    this.mountProfileEditor('setup', multi);
+    this.mountProfileEditor('setup', multi || hunt);
+    this.pacCarousel.el.classList.toggle('hidden', hunt);
     this.show('setup');
   }
 
@@ -358,20 +361,20 @@ export class App {
 
   // ---------------------------------------------------------------- games
 
-  private startSingle(): void {
+  private startSingle(hunt = false): void {
     const params = new URLSearchParams(location.search);
     const startLevel = Math.max(1, Number(params.get('level') ?? 1) || 1);
     this.room = null;
     this.devGame = null;
-    this.startGame(new LocalSession(this.profile, { highScore: loadHighScore(), startLevel }));
+    this.startGame(new LocalSession(this.profile, { hunt, highScore: hunt ? 0 : loadHighScore(), startLevel: hunt ? 1 : startLevel }));
   }
 
   private startGame(session: GameSession): void {
     this.session = session;
     this.audio.reset();
     this.input.reset();
-    $('#pause-help').classList.toggle('hidden', session.mode !== 'single');
-    $('#side').classList.toggle('single', session.mode === 'single');
+    $('#pause-help').classList.toggle('hidden', session.mode === 'multi');
+    $('#side').classList.toggle('single', session.mode !== 'multi');
     this.show('game');
   }
 
@@ -456,7 +459,7 @@ export class App {
   }
 
   private gameOver(s: Snapshot): void {
-    if (!this.devGame) saveHighScore(Math.max(...s.players.map((p) => (s.mode === 'single' || p.id === this.session?.myId ? p.score : 0))));
+    if (!this.devGame) saveHighScore(Math.max(...s.players.map((p) => (s.mode !== 'multi' || p.id === this.session?.myId ? p.score : 0))));
     const ol = $('#final');
     ol.innerHTML = '';
     [...s.players]
@@ -470,7 +473,7 @@ export class App {
     const multi = s.mode === 'multi';
     $('#podium').classList.toggle('hidden', !multi);
     if (multi) this.podium.start(s.players, this.session?.myId ?? '');
-    $('#btn-again').classList.toggle('hidden', s.mode !== 'single');
+    $('#btn-again').classList.toggle('hidden', s.mode === 'multi');
     $('#btn-again').textContent = this.devGame ? 'RETRY' : 'PLAY AGAIN';
     this.audio.stop();
     this.show('over');

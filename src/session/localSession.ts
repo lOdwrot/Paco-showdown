@@ -7,15 +7,16 @@ import type { GameSession } from './types.ts';
 
 /** Single player: runs the Match locally with a fixed timestep. */
 export class LocalSession implements GameSession {
-  readonly mode = 'single' as const;
+  readonly mode: 'single' | 'hunt';
   readonly myId = 'me';
   paused = false;
   readonly match: Match;
   private acc = 0;
   private snap: Snapshot;
 
-  constructor(profile: Profile, opts: { highScore?: number; startLevel?: number; seed?: number; dev?: DevOptions } = {}) {
-    this.match = new Match('single', [{ id: this.myId, ...profile }], {
+  constructor(profile: Profile, opts: { hunt?: boolean; highScore?: number; startLevel?: number; seed?: number; dev?: DevOptions } = {}) {
+    this.mode = opts.hunt ? 'hunt' : 'single';
+    this.match = new Match(this.mode, [{ id: this.myId, ...profile }], {
       highScore: opts.highScore,
       startLevel: opts.startLevel,
       seed: opts.seed ?? Math.floor(Math.random() * 1e9),

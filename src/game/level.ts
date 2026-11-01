@@ -15,6 +15,7 @@ import { Maze, D_DOT, D_POWER, type MapDef } from './maze.ts';
 import { advance, scriptedMove, wrappedDist, type Chooser } from './movement.ts';
 import { chaseTarget, chooseDir, scatterTarget } from './ghostAi.ts';
 import {
+  DIRS,
   DV,
   OPPOSITE,
   createRng,
@@ -69,6 +70,8 @@ export interface LevelOptions {
   /** Dev/test switches (see DevOptions in match.ts). */
   invincible?: boolean;
   noGhosts?: boolean;
+  /** Paco steers himself (Ghost Hunt). */
+  pacoAi?: boolean;
 }
 
 /**
@@ -99,6 +102,8 @@ export class Level {
   invincible: boolean;
   /** Dev: ghosts never leave the house. */
   noGhosts: boolean;
+  /** Paco is steered by the AI (Ghost Hunt). */
+  pacoAi: boolean;
   private modeIdx = 0;
   private modeTimer = MODE_WAVES[0]!;
   private readonly rng: () => number;
@@ -113,6 +118,7 @@ export class Level {
     this.hooks = { emit: () => {}, score: () => {}, ...opts.hooks };
     this.invincible = opts.invincible ?? false;
     this.noGhosts = opts.noGhosts ?? false;
+    this.pacoAi = opts.pacoAi ?? false;
     this.dotsTotal = this.maze.countDots();
     this.dotsLeft = this.dotsTotal;
     this.paco = { x: 0, y: 0, dir: 'left', next: null, chomp: 0, moving: false, scale: 1, smashing: false };
@@ -229,7 +235,8 @@ export class Level {
         return maze.isOpen(nx, ny) || (this.monster && maze.isSmashable(nx, ny));
       };
       let d: Dir | null = null;
-      if (p.next && can(p.next)) d = p.next;
+      if (this.pacoAi) d = this.aiPacoChoice(tx, ty, can);
+      else if (p.next && can(p.next)) d = p.next;
       else if (p.dir && can(p.dir)) d = p.dir;
       if (d && this.monster) {
         const nx = tx + DV[d].x;
@@ -245,6 +252,72 @@ export class Level {
     const moved = advance(p, speed * dt, maze.w, choose);
     p.chomp += moved;
     p.moving = moved > 1e-6;
+  }
+
+  /** BFS distances (tiles) from several source cells over open tiles, wrapping. -1 = unreachable. */
+  private bfs(sources: number[], limit = Infinity): Int32Array {
+    const m = this.maze;
+    const dist = new Int32Array(m.w * m.h).fill(-1);
+    const q: number[] = [];
+    for (const s of sources) if (dist[s] === -1) (dist[s] = 0), q.push(s);
+    for (let h = 0; h < q.length; h++) {
+      const i = q[h]!;
+      if (dist[i]! >= limit) continue;
+      const x = i % m.w;
+      const y = (i / m.w) | 0;
+      for (const [nx0, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]] as const) {
+        if (ny < 0 || ny >= m.h) continue;
+        const nx = (nx0 + m.w) % m.w;
+        const j = m.idx(nx, ny);
+        if (dist[j] !== -1 || !m.isOpen(nx, ny)) continue;
+        dist[j] = dist[i]! + 1;
+        q.push(j);
+      }
+    }
+    return dist;
+  }
+
+  /**
+   * Ghost Hunt AI for Paco, called on tile centres: avoid dangerous ghosts, otherwise
+   * head for the nearest dot (power balls are preferred while ghosts are close);
+   * hunt frightened ghosts when they are near.
+   */
+  private aiPacoChoice(tx: number, ty: number, can: (d: Dir) => boolean): Dir | null {
+    const p = this.paco;
+    const m = this.maze;
+    const options = DIRS.filter((d) => can(d));
+    if (!options.length) return null;
+    const dangerous = this.ghosts.filter((g) => g.state === 'active' && !g.frightened && !this.monster);
+    const scared = this.ghosts.filter((g) => g.state === 'active' && (g.frightened || this.monster));
+    const cell = (x: number, y: number) => m.idx(((Math.round(x) % m.w) + m.w) % m.w, Math.round(y));
+    const danger = dangerous.length ? this.bfs(dangerous.map((g) => cell(g.x, g.y)), 14) : null;
+    const dots: number[] = [];
+    const powers: number[] = [];
+    m.dots.forEach((d, i) => d && (d === D_POWER ? powers : dots).push(i));
+    const nearestDanger = (i: number) => (danger && danger[i]! >= 0 ? danger[i]! : 99);
+    const here = m.idx(tx, ty);
+    const wantPower = powers.length > 0 && nearestDanger(here) < 9;
+    const goals = wantPower ? powers : dots.length ? dots.concat(powers) : powers;
+    const preyField = scared.length ? this.bfs(scared.map((g) => cell(g.x, g.y)), 10) : null;
+    const goalField = this.bfs(goals);
+    let best: Dir | null = null;
+    let bestScore = -Infinity;
+    for (const d of options) {
+      const nx = (tx + DV[d].x + m.w) % m.w;
+      const ny = ty + DV[d].y;
+      const i = m.idx(nx, ny);
+      let score = 0;
+      const dg = nearestDanger(i);
+      if (dg <= 1) score -= 1000;
+      else if (dg < 8) score -= (8 - dg) * 25;
+      if (p.dir && d === OPPOSITE[p.dir]) score -= danger && nearestDanger(here) < 6 ? 0 : 6;
+      if (goalField[i]! >= 0) score -= goalField[i]!;
+      else score -= 200;
+      if (preyField && preyField[i]! >= 0) score += (10 - preyField[i]!) * 2;
+      score += this.rng() * 0.5;
+      if (score > bestScore) (bestScore = score), (best = d);
+    }
+    return best;
   }
 
   private eat(): void {

@@ -1,6 +1,6 @@
 import type { Dir, GameEvent, GhostState, Popup } from './types.ts';
 
-export type MatchMode = 'single' | 'multi';
+export type MatchMode = 'single' | 'multi' | 'hunt';
 
 export type Phase = 'roleReveal' | 'intro' | 'ready' | 'playing' | 'dying' | 'levelComplete' | 'gameOver';
 
@@ -68,6 +68,8 @@ export interface Snapshot {
   highScore: number;
   /** Ghost slot that caught Paco in the current 'dying' phase (-1 otherwise). */
   caughtBy: number;
+  /** Ghost Hunt: seconds left to catch Paco (-1 in other modes). */
+  huntLeft: number;
 }
 
 export function encodeBits(bits: ArrayLike<number>): string {

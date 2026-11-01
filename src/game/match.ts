@@ -1,4 +1,4 @@
-import { GHOST_COUNT, LIVES_MULTI, LIVES_SINGLE, PHASE, SCORE } from '../config.ts';
+import { GHOST_COUNT, HUNT, LIVES_MULTI, LIVES_SINGLE, PHASE, SCORE } from '../config.ts';
 import { assignGhostSkins } from '../skins/catalog.ts';
 import { Level } from './level.ts';
 import { mapForLevel } from './maps/index.ts';
@@ -72,6 +72,10 @@ export class Match {
   tick = 0;
   highScore: number;
   caughtBy = -1;
+  /** Ghost Hunt: seconds left to catch Paco. */
+  huntLeft: number = HUNT.duration;
+  /** Ghost Hunt: true once Paco was caught (win). */
+  huntWon = false;
   private afterReveal: 'intro' | 'ready' = 'intro';
   private readonly inputs = new Map<string, Dir | null>();
   private events: (GameEvent & { tick: number })[] = [];
@@ -87,9 +91,10 @@ export class Match {
     this.mode = mode;
     this.seed = opts.seed ?? 42;
     this.highScore = opts.highScore ?? 0;
-    const lives = mode === 'single' ? LIVES_SINGLE : LIVES_MULTI;
+    const lives = mode === 'multi' ? LIVES_MULTI : LIVES_SINGLE;
     this.players = setups.map((s) => ({ ...s, score: 0, lives, connected: true }));
-    this.pacoId = this.players[0]!.id;
+    // Ghost Hunt: Paco is an AI (no player id); the human is a ghost.
+    this.pacoId = mode === 'hunt' ? '' : this.players[0]!.id;
     this.levelNum = opts.startLevel ?? 1;
     this.dev = opts.dev ?? {};
     this.mapOffset = this.dev.mapIndex !== undefined ? this.dev.mapIndex - (this.levelNum - 1) : 0;
@@ -145,8 +150,16 @@ export class Match {
       case 'playing': {
         this.phaseLeft = 0;
         this.level.step(dt, this.levelInput());
+        if (this.mode === 'hunt' && !this.level.outcome && this.level.freeze <= 0) {
+          this.huntLeft = Math.max(0, this.huntLeft - dt);
+          if (this.huntLeft <= 0) return this.toGameOver();
+        }
         const out = this.level.outcome;
-        if (out?.type === 'died') {
+        if (out && this.mode === 'hunt') {
+          // Caught Paco: win. Paco cleared the board: lose.
+          if (out.type === 'died') this.huntWin(out.caughtBySlot);
+          else this.toGameOver();
+        } else if (out?.type === 'died') {
           this.caughtBy = out.caughtBySlot;
           this.emit('pacoCaught');
           const catcher = this.ghostOwners[out.caughtBySlot];
@@ -192,7 +205,7 @@ export class Match {
   snapshot(): Snapshot {
     const L = this.level;
     const m = L.maze;
-    const pacoPlayer = this.player(this.pacoId);
+    const pacoPlayer = this.player(this.pacoId) ?? (this.mode === 'hunt' ? this.players[0] : undefined);
     return {
       tick: this.tick,
       mode: this.mode,
@@ -246,10 +259,28 @@ export class Match {
       events: this.events.map(({ seq, type }) => ({ seq, type })),
       highScore: Math.max(this.highScore, ...this.players.map((p) => p.score)),
       caughtBy: this.phase === 'dying' ? this.caughtBy : -1,
+      huntLeft: this.mode === 'hunt' ? r2(this.huntLeft) : -1,
     };
   }
 
   // ---------------------------------------------------------------- internals
+
+  private huntWin(slot: number): void {
+    this.caughtBy = slot;
+    this.huntWon = true;
+    this.emit('pacoCaught');
+    const human = this.players[0]!;
+    human.score += HUNT.catchBonus + Math.ceil(this.huntLeft) * HUNT.perSecond;
+    this.level.popups.push({
+      x: this.level.paco.x,
+      y: this.level.paco.y - 1,
+      text: String(human.score),
+      ttl: 2,
+      color: '#ff5050',
+    });
+    this.deathSoundPlayed = false;
+    this.setPhase('dying');
+  }
 
   private emit(type: GameEventType): void {
     this.events.push({ seq: ++this.seq, type, tick: this.tick });
@@ -260,6 +291,7 @@ export class Match {
     const level = new Level(def, this.levelNum, {
       seed: this.seed + this.levelNum * 7919,
       invincible: this.dev.invincible,
+      pacoAi: this.mode === 'hunt',
       noGhosts: this.dev.noGhosts,
     });
     if (this.dev.dotsLeft !== undefined) level.trimDots(this.dev.dotsLeft);
@@ -281,6 +313,12 @@ export class Match {
   }
 
   private assignGhosts(): void {
+    if (this.mode === 'hunt') {
+      this.ghostOwners = Array.from({ length: GHOST_COUNT }, (_, i) => (i === 0 ? this.players[0]!.id : null));
+      this.ghostSkins = assignGhostSkins(this.ghostOwners, new Map([[this.players[0]!.id, this.players[0]!.ghostSkin]]));
+      this.level.setHumanSlots(this.ghostOwners.map((o) => o !== null));
+      return;
+    }
     const ghostsPlayers =
       this.mode === 'multi' ? this.players.filter((p) => p.connected && p.id !== this.pacoId).map((p) => p.id) : [];
     this.ghostOwners = Array.from({ length: GHOST_COUNT }, (_, i) => ghostsPlayers[i] ?? null);
@@ -310,7 +348,7 @@ export class Match {
   private startRound(first: boolean): void {
     this.caughtBy = -1;
     const intro = first && !this.dev.skipIntro;
-    if (this.mode === 'multi') {
+    if (this.mode === 'multi' || this.mode === 'hunt') {
       this.afterReveal = intro ? 'intro' : 'ready';
       this.setPhase('roleReveal');
     } else {
@@ -355,6 +393,7 @@ export class Match {
   }
 
   private afterDeath(): void {
+    if (this.mode === 'hunt') return this.toGameOver();
     const paco = this.player(this.pacoId);
     if (paco && !this.dev.infiniteLives) paco.lives = Math.max(0, paco.lives - 1);
     if (this.mode === 'single') {
