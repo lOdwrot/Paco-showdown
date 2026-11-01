@@ -38,13 +38,13 @@ random exits. Eaten ghosts (eyes) use a BFS distance field to get home.
 Eating the last dot of every level starts the bonus instead of ending the level. There are no
 unlock conditions.
 
-During the bonus, which lasts 5 s:
+During the bonus, which lasts 15 s:
 * Paco grows to 2× size.
 * All ghosts turn blue but keep their normal speed. They flee.
 * There is no bonus dot. Wall smashes shake the whole board for every player, and a separate
   Paco-Monster music loop plays.
 * Paco can smash any wall except the outer border. The border is the edge cells plus any wall
-  touching the void (`_`). He is about 10 % faster than a frightened Paco, and slower (70 % of that) while smashing.
+  touching the void (`_`). He is about 21 % faster than a frightened Paco, and slower (70 % of that) while smashing.
 * Eaten ghosts never respawn. The streak multiplier continues.
 * The level is won when the time is up or as soon as every ghost has been eaten.
 

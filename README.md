@@ -12,7 +12,7 @@ is Paco. Everyone else is a ghost, sees the maze through fog of war, and tries t
   friends join. Paco and the ghosts are played by humans, and AI fills the empty ghost slots.
   Catching Paco is worth +1000 and makes you the next Paco. Each player has 2 lives.
 * **Paco-Monster bonus**: clear the board and Paco grows to
-  double size, smashes walls, and hunts the ghosts for 10 seconds with its own heavy music, crunching sounds and a screen shake on
+  double size, smashes walls, and hunts the ghosts for 15 seconds with its own heavy music, crunching sounds and a screen shake on
   every smashed wall. The round ends when the time is up or all ghosts are eaten.
 * **3 original mazes** (Paco Plaza, Neon Labyrinth, Pumpkin Fortress) that cycle.
 * **Selectable characters**: Paco, Paco-Girl, Paco-President (top hat and monocle), Paco-Punk,

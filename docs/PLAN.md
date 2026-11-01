@@ -58,7 +58,7 @@ Every number lives in `src/config.ts`.
   bonus:
   * Paco grows to 2× size.
   * Every ghost turns blue and edible but keeps normal speed.
-  * Paco can smash any wall except the outer border, moving about 10 % faster than a frightened Paco, and at 70 % of that while smashing. The
+  * Paco can smash any wall except the outer border, moving about 21 % faster than a frightened Paco, and at 70 % of that while smashing. The
     ghost door and house walls can be smashed too.
   * Eaten ghosts do not respawn. The multiplier continues from the current streak.
   * The level is won when the time runs out or all ghosts are eaten.
