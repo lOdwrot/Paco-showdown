@@ -92,4 +92,5 @@ export const COLLIDE_DIST = 0.6;
 export const FOG = {
   ownRadius: 6.5, // tiles
   otherRadius: 3, // tiles
+  huntBonus: 1.25, // Ghost Hunt: own view radius multiplier
 } as const;

@@ -169,7 +169,7 @@ export class Renderer {
     this.drawParticles(rc.dt);
     this.drawPopups(s);
 
-    if (s.mode === 'multi' && me?.role === 'ghost' && s.phase !== 'gameOver') this.drawFog(s, maze, rc.myId);
+    if ((s.mode === 'multi' || s.mode === 'hunt') && me?.role === 'ghost' && s.phase !== 'gameOver') this.drawFog(s, maze, rc.myId);
 
     this.drawHud(s, rc, maze);
   }
@@ -330,7 +330,8 @@ export class Renderer {
     f.globalCompositeOperation = 'destination-out';
     for (const g of s.ghosts) {
       if (g.state === 'gone') continue;
-      const r = (g.playerId === myId ? FOG.ownRadius : FOG.otherRadius) * TILE;
+      const own = FOG.ownRadius * (s.mode === 'hunt' ? FOG.huntBonus : 1);
+      const r = (g.playerId === myId ? own : FOG.otherRadius) * TILE;
       const cx = g.x * TILE + 4;
       const cy = g.y * TILE + 4;
       const grad = f.createRadialGradient(cx, cy, r * 0.6, cx, cy, r);
