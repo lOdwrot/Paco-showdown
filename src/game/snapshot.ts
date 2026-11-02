@@ -31,6 +31,8 @@ export interface SnapPlayer {
   nick: string;
   score: number;
   lives: number;
+  /** The level this player's own Paco run is on. */
+  level: number;
   role: 'paco' | 'ghost';
   /** Ghost slot when role === 'ghost', else -1. */
   slot: number;

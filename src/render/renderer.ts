@@ -78,7 +78,7 @@ export class Renderer {
   private shake = 0;
 
   private ensureMaze(s: Snapshot): MazeCache {
-    const key = `${s.level}:${s.mapIndex}`;
+    const key = `${s.level}:${s.mapIndex}:${s.paco.playerId}`;
     if (!this.cache || this.cache.key !== key) {
       const def = MAPS[s.mapIndex]!;
       const maze = new Maze(def);

@@ -61,7 +61,11 @@ export class Match {
   readonly mode: MatchMode;
   readonly players: PlayerState[];
   level: Level;
+  /** Level number of the current Paco's own run. */
   levelNum: number;
+  /** Multiplayer: every player keeps their own level + eaten dots + smashed walls. */
+  private readonly progress = new Map<string, { levelNum: number; level: Level }>();
+  private readonly startLevel: number;
   phase: Phase = 'intro';
   phaseLeft = 0;
   phaseTotal = 0;
@@ -95,7 +99,8 @@ export class Match {
     this.players = setups.map((s) => ({ ...s, score: 0, lives, connected: true }));
     // Ghost Hunt: Paco is an AI (no player id); the human is a ghost.
     this.pacoId = mode === 'hunt' ? '' : this.players[0]!.id;
-    this.levelNum = opts.startLevel ?? 1;
+    this.startLevel = opts.startLevel ?? 1;
+    this.levelNum = this.startLevel;
     this.dev = opts.dev ?? {};
     this.mapOffset = this.dev.mapIndex !== undefined ? this.dev.mapIndex - (this.levelNum - 1) : 0;
     this.monsterNowPending = !!this.dev.monsterNow;
@@ -127,8 +132,7 @@ export class Match {
     if (id === this.pacoId) {
       const next = this.pickNextPaco(-1, false);
       if (!next) return this.toGameOver();
-      this.pacoId = next;
-      this.assignGhosts();
+      this.switchPaco(next);
       this.level.resetActors();
       this.startRound(false);
     } else {
@@ -248,6 +252,7 @@ export class Match {
           nick: p.nick,
           score: p.score,
           lives: p.lives,
+          level: p.id === this.pacoId ? this.levelNum : (this.progress.get(p.id)?.levelNum ?? this.startLevel),
           role: p.id === this.pacoId ? 'paco' : 'ghost',
           slot: p.id === this.pacoId ? -1 : slot,
           pacSkin: p.pacSkin,
@@ -401,12 +406,30 @@ export class Match {
     } else {
       const next = this.pickNextPaco(this.caughtBy, true);
       if (!next) return this.toGameOver();
-      this.pacoId = next;
-      this.assignGhosts();
+      this.switchPaco(next);
     }
     this.level.resetActors();
     this.level.popups = [];
     this.startRound(false);
+  }
+
+  /**
+   * Makes `next` the Paco. The maze in play is that player's own: their level, eaten
+   * dots and smashed walls are restored (or a fresh first level if they're new to it).
+   */
+  private switchPaco(next: string): void {
+    this.progress.set(this.pacoId, { levelNum: this.levelNum, level: this.level });
+    this.pacoId = next;
+    const saved = this.progress.get(next);
+    if (saved) {
+      this.levelNum = saved.levelNum;
+      this.level = saved.level;
+    } else {
+      this.levelNum = this.startLevel;
+      this.level = this.createLevel();
+    }
+    this.level.popups = [];
+    this.assignGhosts();
   }
 
   private nextLevel(): void {

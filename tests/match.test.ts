@@ -121,3 +121,35 @@ describe('Snapshot', () => {
     expect(s.ghosts).toHaveLength(4);
   });
 });
+
+describe('per-player progress (multiplayer)', () => {
+  const players = ['a', 'b', 'c'].map((id) => ({ id, nick: id, pacSkin: 'classic', ghostSkin: 'blaze' }));
+
+  it('each Paco keeps their own dots and level', () => {
+    const m = new Match('multi', players, { seed: 3, dev: { skipIntro: true } });
+    // A (Paco) eats some dots on level 1.
+    for (let i = 0; i < 400 && m.phase !== 'playing'; i++) m.step(1 / 60);
+    const levelA = m.level;
+    levelA.maze.dots.fill(0);
+    levelA.maze.dots[levelA.maze.idx(levelA.maze.pacoSpawn.x, levelA.maze.pacoSpawn.y)] = 1;
+    const dotsA = levelA.dotsLeft;
+    m.levelNum = 4; // pretend A reached level 4
+    // Ghost catches A -> B becomes Paco with a fresh level 1.
+    m.level.ghosts[0]!.state = 'active';
+    m.level.ghosts[0]!.x = m.level.paco.x;
+    m.level.ghosts[0]!.y = m.level.paco.y;
+    for (let i = 0; i < 600 && m.pacoId === 'a'; i++) m.step(1 / 60);
+    expect(m.pacoId).not.toBe('a');
+    expect(m.level).not.toBe(levelA);
+    expect(m.levelNum).toBe(1);
+    expect(m.level.dotsLeft).toBe(m.level.dotsTotal);
+    expect(m.snapshot().players.find((p) => p.id === 'a')!.level).toBe(4);
+    // Rotate back to A: their level and dots are restored.
+    m.disconnect(m.pacoId);
+    m.disconnect(m.pacoId === 'a' ? 'c' : m.pacoId);
+    expect(m.pacoId).toBe('a');
+    expect(m.level).toBe(levelA);
+    expect(m.levelNum).toBe(4);
+    expect(m.level.dotsLeft).toBe(dotsA);
+  });
+});

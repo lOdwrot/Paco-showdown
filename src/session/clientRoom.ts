@@ -91,7 +91,7 @@ export class ClientRoom implements GameSession {
     const a = this.prev;
     const b = this.last;
     if (!b) return null;
-    if (!a || a.mapIndex !== b.mapIndex || a.level !== b.level) return b;
+    if (!a || a.mapIndex !== b.mapIndex || a.level !== b.level || a.paco.playerId !== b.paco.playerId) return b;
     const interval = Math.max(1, b.tick - a.tick) / SIM_HZ;
     const t = Math.min(1, this.since / interval);
     const lerp = (p: number, q: number) => (Math.abs(q - p) > 2 ? q : p + (q - p) * t);

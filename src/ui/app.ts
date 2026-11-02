@@ -541,7 +541,7 @@ export class App {
       const color = p.role === 'paco' ? '#ffe600' : ghostSkin(ghost?.skin ?? p.ghostSkin).body;
       return { p, img, color };
     });
-    const sig = JSON.stringify(rows.map((r) => [r.p.id, r.p.score, r.p.lives, r.p.role, r.p.slot, r.p.connected]));
+    const sig = JSON.stringify(rows.map((r) => [r.p.id, r.p.score, r.p.lives, r.p.role, r.p.slot, r.p.connected, r.p.level]));
     if (ol.dataset.sig === sig) return;
     ol.dataset.sig = sig;
     ol.innerHTML = '';
@@ -552,7 +552,7 @@ export class App {
       const lives = '♥'.repeat(Math.max(0, p.lives)) || '—';
       li.insertAdjacentHTML(
         'beforeend',
-        `<span style="color:${color}">${p.nick}${p.id === myId ? ' (YOU)' : ''}</span><span><span class="score">${p.score}</span> <span class="lives">${lives}</span></span>`,
+        `<span style="color:${color}">${p.nick}${p.id === myId ? ' (YOU)' : ''}</span><span>${s.mode === 'multi' ? `<span class="lives">L${p.level}</span> ` : ''}<span class="score">${p.score}</span> <span class="lives">${lives}</span></span>`,
       );
       ol.append(li);
     }
