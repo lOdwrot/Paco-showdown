@@ -152,4 +152,18 @@ describe('per-player progress (multiplayer)', () => {
     expect(m.levelNum).toBe(4);
     expect(m.level.dotsLeft).toBe(dotsA);
   });
+
+  it('lives are counted per player', () => {
+    const m = new Match('multi', players, { seed: 3, dev: { skipIntro: true } });
+    for (let i = 0; i < 400 && m.phase !== 'playing'; i++) m.step(1 / 60);
+    const first = m.pacoId;
+    const g = m.level.ghosts[0]!;
+    g.state = 'active';
+    g.x = m.level.paco.x;
+    g.y = m.level.paco.y;
+    for (let i = 0; i < 600 && m.pacoId === first; i++) m.step(1 / 60);
+    const lives = Object.fromEntries(m.players.map((p) => [p.id, p.lives]));
+    expect(lives[first]).toBe(LIVES_MULTI - 1);
+    expect(Object.values(lives).filter((l) => l === LIVES_MULTI)).toHaveLength(2);
+  });
 });
