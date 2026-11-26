@@ -190,6 +190,9 @@ export class App {
       case 'menu':
         this.quit();
         break;
+      case 'room':
+        this.backToRoom();
+        break;
       case 'again':
         if (this.devGame) this.startDev();
         else this.startSingle(this.mode === 'hunt');
@@ -385,12 +388,7 @@ export class App {
       const room = new HostRoom(t, this.profile);
       this.room = room;
       room.onLobbyChange = (p) => this.renderLobby(p, room.myId);
-      $('#room-code').textContent = room.code;
-      $('#lobby-hint').textContent = 'SHARE THIS CODE WITH FRIENDS (MAX 5 PLAYERS)';
-      $('#btn-start-multi').classList.remove('hidden');
-      this.renderLobby(room.players, room.myId);
-      this.mountProfileEditor('lobby', true);
-      this.show('lobby');
+      this.enterLobby(room);
       $('#toast').classList.add('hidden');
     } catch (e) {
       this.toast(String((e as Error).message ?? e).toUpperCase());
@@ -411,17 +409,47 @@ export class App {
         if (this.room !== room) return;
         this.toast(reason.toUpperCase());
         if (this.screen !== 'over') this.quit(false);
+        else $('#btn-room').classList.add('hidden');
+      };
+      room.onReset = () => {
+        if (this.room !== room) return;
+        if (this.screen === 'lobby') this.enterLobby(room);
+        // Reset can overtake the final snapshot on a laggy link: show the results we have.
+        else if (this.screen === 'game' && this.lastSnap) this.gameOver(this.lastSnap);
       };
       $('#room-code').textContent = code;
-      $('#lobby-hint').textContent = 'WAITING FOR HOST TO START...';
-      $('#btn-start-multi').classList.add('hidden');
-      this.renderLobby([], '');
-      this.mountProfileEditor('lobby', true);
-      this.show('lobby');
+      this.enterLobby(room);
       $('#toast').classList.add('hidden');
     } catch (e) {
       this.toast(String((e as Error).message ?? e).toUpperCase());
     }
+  }
+
+  /** Shows the lobby of the current room (first time and after every finished match). */
+  private enterLobby(room: HostRoom | ClientRoom): void {
+    const host = room instanceof HostRoom;
+    if (host) $('#room-code').textContent = room.code;
+    $('#lobby-hint').textContent = host
+      ? 'SHARE THIS CODE WITH FRIENDS (MAX 5 PLAYERS)'
+      : room.started
+        ? 'WAITING FOR HOST TO RETURN TO THE ROOM...'
+        : 'WAITING FOR HOST TO START...';
+    $('#btn-start-multi').classList.toggle('hidden', !host);
+    this.renderLobby(room.players, room.myId);
+    this.mountProfileEditor('lobby', true);
+    this.show('lobby');
+  }
+
+  /** Multiplayer game over → back to the same room's lobby (no re-hosting needed). */
+  private backToRoom(): void {
+    const room = this.room;
+    if (!room || (room instanceof ClientRoom && room.closed)) return this.quit(false);
+    if (room instanceof HostRoom) room.backToLobby();
+    this.session = null;
+    this.lastSnap = null;
+    this.audio.stop();
+    this.input.reset();
+    this.enterLobby(room);
   }
 
   private renderLobby(players: LobbyPlayer[], myId: string): void {
@@ -473,7 +501,10 @@ export class App {
     const multi = s.mode === 'multi';
     $('#podium').classList.toggle('hidden', !multi);
     if (multi) this.podium.start(s.players, this.session?.myId ?? '');
-    $('#btn-again').classList.toggle('hidden', s.mode === 'multi');
+    $('#btn-again').classList.toggle('hidden', multi);
+    const roomOpen = !!this.room && !(this.room instanceof ClientRoom && this.room.closed);
+    $('#btn-room').classList.toggle('hidden', !multi || !roomOpen);
+    $('#btn-room').textContent = 'BACK TO ROOM';
     $('#btn-again').textContent = this.devGame ? 'RETRY' : 'PLAY AGAIN';
     this.audio.stop();
     this.show('over');

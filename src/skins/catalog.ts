@@ -25,6 +25,8 @@ export const PAC_SKINS: readonly PacSkin[] = [
   { id: 'punk', name: 'PACO-PUNK', body: '#ffe600', blurb: 'Mohawk of fury' },
   { id: 'ninja', name: 'PACO-NINJA', body: '#ffd000', blurb: 'Silent but hungry' },
   { id: 'cool', name: 'PACO-COOL', body: '#ffe600', blurb: 'Shades on, always' },
+  { id: 'queen', name: 'PACO QUEEN', body: '#ffe600', blurb: 'Tiara & royal robe' },
+  { id: 'king', name: 'PACO KING', body: '#ffe600', blurb: 'Crown & ermine cape' },
 ];
 
 export const GHOST_SKINS: readonly GhostSkin[] = [
@@ -36,6 +38,8 @@ export const GHOST_SKINS: readonly GhostSkin[] = [
   { id: 'sirspook', name: 'SIR SPOOK', body: '#30d050', blurb: 'Top hat gentleman' },
   { id: 'pirate', name: 'GHOSTBEARD', body: '#8090b0', blurb: 'Arr, eyepatch' },
   { id: 'wisp', name: 'LADY WISP', body: '#f0f0ff', blurb: 'Elegant & eerie' },
+  { id: 'gqueen', name: 'GHOST QUEEN', body: '#40c890', blurb: 'Haunts with grace' },
+  { id: 'gking', name: 'GHOST KING', body: '#d02870', blurb: 'Rules the maze' },
 ];
 
 /** Default ghost skin per slot for AI ghosts. */

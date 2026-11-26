@@ -7,7 +7,7 @@ import { isDir, type Dir } from '../game/types.ts';
  * Bump PROTOCOL_VERSION on breaking changes. Every inbound message is validated
  * by parseClientMsg / parseHostMsg – never trust the wire.
  */
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 export const NICK_MAX = 10;
 
 export interface Profile {
@@ -33,6 +33,8 @@ export type HostMsg =
   | { t: 'reject'; reason: string }
   | { t: 'lobby'; players: LobbyPlayer[] }
   | { t: 'start' }
+  /** The finished match was closed: everyone is back in the lobby of the same room. */
+  | { t: 'reset' }
   | { t: 'snap'; s: Snapshot }
   | { t: 'end'; reason: string }
   | { t: 'pong'; at: number };
@@ -85,6 +87,8 @@ export function parseHostMsg(raw: unknown): HostMsg | null {
       return Array.isArray(m.players) ? (m as HostMsg) : null;
     case 'start':
       return { t: 'start' };
+    case 'reset':
+      return { t: 'reset' };
     case 'snap':
       return m.s && typeof m.s === 'object' && typeof (m.s as Snapshot).tick === 'number' ? (m as HostMsg) : null;
     case 'pong':

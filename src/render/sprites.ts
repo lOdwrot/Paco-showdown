@@ -68,6 +68,31 @@ const PAC_ACCESSORIES: Record<string, PacAccessory> = {
     eye: false,
     overlays: [{ x: 7, y: 5, rows: ['KKKKKKK', '.KKWKKK', '..KKKK.'], pal: { K: '#101010', W: '#80c0ff' } }],
   },
+  queen: {
+    eye: true,
+    overlays: [
+      {
+        x: 5,
+        y: 0,
+        rows: ['....P....', '.Y..Y..Y.', 'YWYYPYYWY', 'YYYYYYYYY'],
+        pal: { Y: '#f0c020', W: '#fff8f0', P: '#ff40a0' },
+      },
+      { x: 9, y: 5, rows: ['k.k.k'], pal: { k: K } }, // lashes
+      { x: 1, y: 6, rows: ['.VV', 'VV.', 'VV.', 'VV.', 'VV.', 'VV.', '.VV'], pal: { V: '#9030d0' } }, // robe
+    ],
+  },
+  king: {
+    eye: true,
+    overlays: [
+      {
+        x: 5,
+        y: 0,
+        rows: ['Y...Y...Y', 'YY.YYY.YY', 'YRYYBYYRY', 'YYYYYYYYY'],
+        pal: { Y: '#f0c020', R: '#e02020', B: '#2060ff' },
+      },
+      { x: 1, y: 6, rows: ['.RR', 'RW.', 'RR.', 'RR.', 'RW.', 'RR.', '.RR'], pal: { R: '#d01818', W: W } }, // cape
+    ],
+  },
 };
 
 function pacGrid(body: string, mouth: number, acc: PacAccessory | null, monster = false): PixelGrid {
@@ -203,6 +228,19 @@ const GHOST_ACCESSORIES: Record<string, GhostAccessory> = {
     ],
   },
   wisp: { top: [{ x: 12, y: 1, rows: ['P...P', 'PP.PP', 'PPKPP', 'PP.PP'], pal: { P: '#ff60b0', K: '#ffd0e8' } }] },
+  gqueen: {
+    top: [{ x: 7, y: 0, rows: ['..PP..', 'Y.PP.Y', 'YYYYYY'], pal: { Y: '#f0c020', P: '#ff40a0' } }],
+    face: [
+      { x: 5, y: 5, rows: ['k.k...k.k'], pal: { k: K } },
+      { x: 9, y: 13, rows: ['RR'], pal: { R: '#ff2050' } },
+    ],
+  },
+  gking: {
+    top: [
+      { x: 6, y: 0, rows: ['Y..YY..Y', 'YY.YY.YY', 'YRYBBYRY', 'YYYYYYYY'], pal: { Y: '#f0c020', R: '#e02020', B: '#2060ff' } },
+    ],
+    face: [{ x: 6, y: 12, rows: ['WW....WW', '.WWWWWW.'], pal: { W } }],
+  },
 };
 
 export type GhostLook = 'normal' | 'fright' | 'flash' | 'eyes';

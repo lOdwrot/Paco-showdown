@@ -27,6 +27,7 @@ export class HostRoom implements GameSession {
   private acc = 0;
   private sendAcc = 0;
   private snap: Snapshot | null = null;
+  private sentFinal = false;
 
   constructor(
     readonly transport: HostTransport,
@@ -112,6 +113,24 @@ export class HostRoom implements GameSession {
     this.lobbyChanged();
   }
 
+  /**
+   * After a finished match: drops the match and puts the room back into lobby mode so
+   * everyone can change their look and play again without re-hosting. Players who
+   * disconnected during the match are removed from the lobby.
+   */
+  backToLobby(): void {
+    if (!this.match) return;
+    const gone = new Set(this.match.snapshot().players.filter((p) => !p.connected).map((p) => p.id));
+    this.match = null;
+    this.snap = null;
+    this.acc = 0;
+    this.sendAcc = 0;
+    this.sentFinal = false;
+    this.players = this.players.filter((p) => p.isHost || !gone.has(p.id));
+    this.broadcast({ t: 'reset' });
+    this.lobbyChanged();
+  }
+
   start(opts: { highScore?: number } = {}): void {
     if (this.match) return;
     this.match = new Match(
@@ -133,7 +152,11 @@ export class HostRoom implements GameSession {
     }
     this.snap = this.match.snapshot();
     this.sendAcc += dt;
-    if (this.sendAcc >= 1 / SNAPSHOT_HZ) {
+    // The final snapshot is always sent right away: the host leaves the game screen
+    // as soon as the match is finished, and clients need it to see the results.
+    const final = this.match.finished && !this.sentFinal;
+    if (final) this.sentFinal = true;
+    if (final || this.sendAcc >= 1 / SNAPSHOT_HZ) {
       this.sendAcc %= 1 / SNAPSHOT_HZ;
       this.broadcast({ t: 'snap', s: this.snap });
     }

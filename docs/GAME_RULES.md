@@ -65,6 +65,9 @@ During the bonus, which lasts 15 s:
 ## Lobby
 Until the host presses START, every player can change their nickname, Paco skin, and ghost skin
 from the lobby (client message `profile`). Everyone sees the changes live.
+After a multiplayer game ends, BACK TO ROOM returns everyone to the same room's lobby, so you can
+change characters and start the next game without hosting again. Looks picked on the results screen
+are applied when you're back in the room.
 
 ## Dev options (testing only)
 Main menu → DEV OPTIONS. You can choose the map and level (speed), how many dots to keep, and

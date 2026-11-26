@@ -34,9 +34,12 @@ Pick the transport at runtime with `?net=peer|ws|local`, or at build time with `
 The relay only routes messages. To make the server authoritative instead, run `Match` in Node,
 since `src/game` has no DOM dependencies, and send the same `HostMsg` messages.
 
-## Protocol (`net/protocol.ts`, version 2)
+## Protocol (`net/protocol.ts`, version 4)
 Client → host: `hello{v, profile}`, `profile{profile}` (lobby only), `input{dir}`, `ping{at}`.
-Host → client: `welcome{id, code}`, `reject{reason}`, `lobby{players}`, `start`,
+Host → client: `welcome{id, code}`, `reject{reason}`, `lobby{players}`, `start`, `reset`,
 `snap{s: Snapshot}`, `end{reason}`, `pong{at}`.
+`reset` is sent when the host presses BACK TO ROOM after a finished match: the match is dropped,
+players who left during it are removed, and the room is a lobby again (same code, new players may
+join). The final snapshot of a match is always broadcast immediately, outside the 30 Hz cadence.
 The host validates every inbound message: it sanitises nicknames and checks skins against the
 catalog.

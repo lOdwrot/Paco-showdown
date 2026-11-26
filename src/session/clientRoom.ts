@@ -18,16 +18,20 @@ export class ClientRoom implements GameSession {
   onLobbyChange: (players: LobbyPlayer[]) => void = () => {};
   onStart: () => void = () => {};
   onClosed: (reason: string) => void = () => {};
+  /** Host closed the finished match and the room is back in lobby mode. */
+  onReset: () => void = () => {};
+  private profile: Profile;
   private prev: Snapshot | null = null;
   private last: Snapshot | null = null;
   private since = 0;
   private lastDir: Dir | null = null;
-  private closed = false;
+  closed = false;
 
   constructor(
     readonly transport: ClientTransport,
     profile: Profile,
   ) {
+    this.profile = { ...profile };
     transport.onMessage((raw) => this.handle(raw));
     transport.onClose((r) => this.close(r));
     this.send({ t: 'hello', v: PROTOCOL_VERSION, profile });
@@ -60,8 +64,18 @@ export class ClientRoom implements GameSession {
         this.onLobbyChange(m.players);
         break;
       case 'start':
+        this.prev = this.last = null;
+        this.lastDir = null;
         this.started = true;
         this.onStart();
+        break;
+      case 'reset':
+        this.started = false;
+        this.prev = this.last = null;
+        this.lastDir = null;
+        // Send whatever look was picked while the podium was showing.
+        this.send({ t: 'profile', profile: this.profile });
+        this.onReset();
         break;
       case 'snap':
         if (this.last && m.s.tick <= this.last.tick) return;
@@ -107,6 +121,7 @@ export class ClientRoom implements GameSession {
 
   /** Changes nickname/skins while still in the lobby. */
   updateProfile(profile: Profile): void {
+    this.profile = { ...profile };
     if (!this.started) this.send({ t: 'profile', profile });
   }
 

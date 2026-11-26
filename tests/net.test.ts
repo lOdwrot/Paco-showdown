@@ -78,6 +78,50 @@ describe('multiplayer over local transport', () => {
     expect(host.match!.ghostOwners.filter(Boolean)).toHaveLength(1);
   });
 
+  it('after a match the room returns to the lobby and can start a new game', async () => {
+    const hostT = await localFactory.host();
+    const host = new HostRoom(hostT, { nick: 'HOST', pacSkin: 'king', ghostSkin: 'gking' });
+    cleanups.push(() => hostT.close());
+    const c1 = new ClientRoom(await localFactory.join(hostT.code), { nick: 'ANA', pacSkin: 'queen', ghostSkin: 'gqueen' });
+    const c2 = new ClientRoom(await localFactory.join(hostT.code), { nick: 'BOB', pacSkin: 'punk', ghostSkin: 'pirate' });
+    cleanups.push(() => c1.dispose(), () => c2.dispose());
+    await until(() => host.players.length === 3);
+
+    host.start();
+    await until(() => c1.started && !!c1.view());
+    for (let i = 0; i < 10; i++) host.update(SIM_DT);
+    c2.dispose();
+    await until(() => host.match!.snapshot().players.find((p) => p.nick === 'BOB')!.connected === false);
+
+    // The final snapshot reaches clients even between regular 30 Hz sends.
+    const m = host.match! as unknown as { phase: string; phaseLeft: number };
+    m.phase = 'gameOver';
+    m.phaseLeft = 0.001;
+    host.update(SIM_DT / 2);
+    host.update(SIM_DT);
+    expect(host.over).toBe(true);
+    await until(() => c1.over);
+
+    // Profile picked on the podium (while the match still exists) is applied after the reset.
+    c1.updateProfile({ nick: 'ANA', pacSkin: 'girl', ghostSkin: 'wisp' });
+    let resets = 0;
+    c1.onReset = () => resets++;
+    host.backToLobby();
+    expect(host.match).toBeNull();
+    await until(() => resets === 1 && !c1.started && c1.view() === null);
+    await until(() => host.players.find((p) => p.nick === 'ANA')?.pacSkin === 'girl');
+    expect(host.players.map((p) => p.nick)).toEqual(['HOST', 'ANA']); // leaver dropped
+
+    // New players can join the same room again, and a fresh match starts.
+    const c3 = new ClientRoom(await localFactory.join(hostT.code), { nick: 'CY', pacSkin: 'cool', ghostSkin: 'frosty' });
+    cleanups.push(() => c3.dispose());
+    await until(() => host.players.length === 3 && c1.players.length === 3);
+    host.start();
+    await until(() => c1.started && c3.started && !!c1.view() && !!c3.view());
+    expect(c1.view()!.phase).toBe('roleReveal');
+    expect(c1.view()!.players.map((p) => p.nick)).toEqual(['HOST', 'ANA', 'CY']);
+  });
+
   it('joining a missing room fails with a readable error', async () => {
     await expect(localFactory.join('ZZZZZ')).rejects.toThrow('Room not found');
   });

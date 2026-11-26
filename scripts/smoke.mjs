@@ -180,6 +180,36 @@ try {
   assert(Math.abs(hs.tick - gs.tick) < 30, `guest lagging: ${hs.tick} vs ${gs.tick}`);
   assert(gs.ghosts.some((g) => g.playerId && g.skin === 'count'), 'guest ghost uses chosen skin');
 
+  // End the match (forced) → both return to the same room, change looks, play again.
+  await host.evaluate(() => {
+    const m = window.__paco.room.match;
+    m.phase = 'gameOver';
+    m.phaseLeft = 0;
+  });
+  await host.bringToFront();
+  await host.waitForSelector('#screen-over:not(.hidden)');
+  await guest.bringToFront();
+  await guest.waitForSelector('#screen-over:not(.hidden)');
+  await guest.waitForSelector('#btn-room:not(.hidden)');
+  await host.bringToFront();
+  await host.click('#btn-room');
+  await host.waitForSelector('#screen-lobby:not(.hidden)');
+  await guest.bringToFront();
+  await guest.click('#btn-room');
+  await guest.waitForSelector('#screen-lobby:not(.hidden)');
+  await pick(guest, 'pac', 'queen');
+  await pick(guest, 'ghost', 'gking');
+  await host.waitForFunction(() =>
+    window.__paco.room?.players?.some((p) => p.pacSkin === 'queen' && p.ghostSkin === 'gking'),
+  );
+  await guest.screenshot({ path: `${OUT}/12-guest-back-in-room.png` });
+  await host.click('[data-action=start-multi]');
+  await guest.waitForSelector('#screen-game:not(.hidden)');
+  await sleep(1200);
+  const rs = await snap(guest);
+  assert(rs.phase === 'roleReveal' && rs.players.length === 2, `rematch did not start: ${rs.phase}`);
+  assert(rs.ghosts.some((g) => g.playerId && g.skin === 'gking'), 'rematch uses the new ghost skin');
+
   if (errors.length) throw new Error(`page errors:\n${errors.join('\n')}`);
   console.log('SMOKE OK – screenshots in', OUT);
 } catch (e) {
