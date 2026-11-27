@@ -44,8 +44,9 @@ const PAC_ACCESSORIES: Record<string, PacAccessory> = {
       {
         x: 5,
         y: 0,
-        rows: ['..KKKKKK..', '..KKKKKK..', '..KKKKKK..', '..RRRRRR..', 'KKKKKKKKKK'],
-        pal: { K: '#111111', R: '#c01020' },
+        // Silver rim + sheen so the black hat stays readable on the black maze background.
+        rows: ['..LLLLLL..', '..LKHKKL..', '..LKHKKL..', '..LRRRRL..', 'LLLLLLLLLL'],
+        pal: { K: '#2a2e40', H: '#8a94b8', L: '#b8c0d8', R: '#e01828' },
       },
       { x: 9, y: 5, rows: ['YYYY', 'Y..Y', 'Y..Y', 'YYYY', '.Y..', 'Y...', 'Y...'], pal: { Y: '#f0c020' } },
     ],
