@@ -47,6 +47,11 @@ During the bonus, which lasts 15 s:
   touching the void (`_`). He is about 21 % faster than a frightened Paco, and slower (70 % of that) while smashing.
 * Eaten ghosts never respawn. The streak multiplier continues.
 * The level is won when the time is up or as soon as every ghost has been eaten.
+* **Heart:** an empty heart appears under the board (bottom centre) every time Paco-Monster
+  starts. Each ghost eaten as Paco-Monster fills one quarter. Eating all four fills it: the heart
+  flies to the centre of the screen and grows, a short "found something special" fanfare plays,
+  and the current Paco gets **+1 life**. In multiplayer every player sees the heart; the life goes
+  to the player who is Paco. (Not shown in Ghost Hunt.)
 
 ## Multiplayer
 * Up to 5 players. The host is Paco first. Every other player controls a ghost slot, and AI fills
@@ -73,6 +78,7 @@ are applied when you're back in the room.
 Main menu → DEV OPTIONS. You can choose the map and level (speed), how many dots to keep, and
 toggles for:
 * Paco-Monster now (wall smashing)
+* Paco-Monster heart 3/4 full
 * power ball at start
 * invincible
 * infinite lives

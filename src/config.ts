@@ -79,6 +79,15 @@ export const MONSTER = {
   shakeTime: 0.3, // seconds for the shake to die down
 } as const;
 
+/** Paco-Monster heart: one piece per ghost eaten as Paco-Monster; a full heart = +1 life. */
+export const HEART = {
+  pieces: 4, // quarters to fill (one per ghost)
+  celebrateTime: 3.4, // seconds the level-complete phase lasts after a full heart (fly-in + grow + jingle)
+  flyTime: 0.6, // seconds to fly from the HUD to the screen centre
+  growTime: 0.4, // then seconds to grow to full size
+  bigScale: 5, // final size multiplier
+} as const;
+
 /** Ghost Hunt (single player as a ghost, AI Paco). */
 export const HUNT = {
   duration: 90, // seconds to catch Paco

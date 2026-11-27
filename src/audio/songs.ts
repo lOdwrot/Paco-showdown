@@ -51,6 +51,19 @@ export const GAME_OVER: Song = {
   ],
 };
 
+/**
+ * Full Paco-Monster heart: a short "you found something special!" fanfare –
+ * a rising run, a pause, then a bright held chord with a twinkle on top.
+ */
+export const HEART_FANFARE: Song = {
+  step: 0.1,
+  tracks: [
+    { wave: 'square', vol: 0.15, notes: 'D5 E5 F#5 A5 - B5 C#6:2 D6:8' },
+    { wave: 'triangle', vol: 0.28, notes: 'D3:2 A3:2 - G3 A3:2 D4:8' },
+    { wave: 'sine', vol: 0.08, notes: '- - - - - - - - A6 D7 F#7 A7 F#7 D7 A6 D7' },
+  ],
+};
+
 export const ROLE_STING: Song = {
   step: 0.08,
   tracks: [{ wave: 'square', vol: 0.14, notes: 'G4 C5 E5 G5:3' }],

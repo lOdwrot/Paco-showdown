@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Match, type PlayerSetup } from '../src/game/match.ts';
-import { PHASE, SCORE, SIM_DT, LIVES_SINGLE, LIVES_MULTI } from '../src/config.ts';
+import { HEART, PHASE, SCORE, SIM_DT, LIVES_SINGLE, LIVES_MULTI } from '../src/config.ts';
 import { decodeBits } from '../src/game/snapshot.ts';
 
 const P = (id: string, ghostSkin = 'blaze'): PlayerSetup => ({ id, nick: id.toUpperCase(), pacSkin: 'classic', ghostSkin });
@@ -165,5 +165,44 @@ describe('per-player progress (multiplayer)', () => {
     const lives = Object.fromEntries(m.players.map((p) => [p.id, p.lives]));
     expect(lives[first]).toBe(LIVES_MULTI - 1);
     expect(Object.values(lives).filter((l) => l === LIVES_MULTI)).toHaveLength(2);
+  });
+});
+describe('Match – Paco-Monster heart', () => {
+  function eatAllAsMonster(m: Match) {
+    runUntil(m, () => m.phase === 'playing');
+    m.level.startMonster();
+    for (const g of m.level.ghosts) {
+      Object.assign(g, { state: 'active', x: m.level.paco.x, y: m.level.paco.y });
+      m.level.freeze = 0;
+      m.step(SIM_DT);
+    }
+  }
+
+  it('a full heart gives the Paco an extra life and a longer celebration', () => {
+    const m = new Match('single', [P('me')]);
+    expect(m.snapshot().heart).toBe(-1);
+    runUntil(m, () => m.phase === 'playing');
+    m.level.startMonster();
+    expect(m.snapshot().heart).toBe(0);
+    eatAllAsMonster(m);
+    const s = m.snapshot();
+    expect(s.heart).toBe(HEART.pieces);
+    expect(s.heartAnim).toBeGreaterThanOrEqual(0);
+    expect(s.events.map((e) => e.type)).toContain('heartFull');
+    expect(m.players[0]!.lives).toBe(LIVES_SINGLE + 1);
+    expect(m.phase).toBe('levelComplete');
+    expect(m.phaseTotal).toBe(HEART.celebrateTime);
+    runUntil(m, () => m.phase !== 'levelComplete');
+    expect(m.levelNum).toBe(2);
+    expect(m.snapshot().heart).toBe(-1);
+    expect(m.snapshot().heartAnim).toBe(-1);
+  });
+
+  it('multiplayer: the heart is in the shared snapshot and the life goes to the Paco', () => {
+    const m = new Match('multi', [P('a'), P('b', 'frost')]);
+    eatAllAsMonster(m);
+    expect(m.snapshot().heart).toBe(HEART.pieces);
+    expect(m.player('a')!.lives).toBe(LIVES_MULTI + 1);
+    expect(m.player('b')!.lives).toBe(LIVES_MULTI);
   });
 });

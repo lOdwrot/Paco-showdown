@@ -45,6 +45,7 @@ export type GameEventType =
   | 'death'
   | 'levelClear'
   | 'monsterStart'
+  | 'heartFull'
   | 'wallSmash'
   | 'roleReveal'
   | 'gameOver';

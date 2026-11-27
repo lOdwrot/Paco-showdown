@@ -107,6 +107,26 @@ try {
   assert(s.mapIndex === 1, `dev map should be 1, got ${s.mapIndex}`);
   assert(s.monsterLeft > 0, 'dev Paco-Monster should be running');
   assert(s.broken.length > 0, 'Paco-Monster should have smashed a wall');
+  assert(s.heart >= 0 && s.heart < 4, `Paco-Monster heart should be shown and not full, got ${s.heart}`);
+  // Feed Paco-Monster every remaining ghost: the heart fills and flies to the centre.
+  const livesBefore = s.players[0].lives;
+  await p.evaluate(() => {
+    const m = window.__paco.session.match;
+    const L = m.level;
+    for (const g of L.ghosts) {
+      if (g.state === 'gone' || g.noRespawn) continue;
+      Object.assign(g, { state: 'active', x: L.paco.x, y: L.paco.y });
+      L.freeze = 0;
+      m.step(1 / 60);
+    }
+  });
+  await sleep(1800);
+  s = await snap(p);
+  await p.screenshot({ path: `${OUT}/05b-heart-full.png` });
+  if (s.heart === 4) {
+    assert(s.heartAnim > 0, 'heart celebration should be running');
+    assert(s.players[0].lives === livesBefore + 1, 'full heart should give +1 life');
+  }
   await p.close();
 
   // ---------------- phone layout (portrait + landscape): the maze must fill the screen

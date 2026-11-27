@@ -251,6 +251,7 @@ export class App {
 
   private static readonly DEV_FLAGS = [
     'monsterNow',
+    'heartAlmostFull',
     'powerAtStart',
     'invincible',
     'infiniteLives',

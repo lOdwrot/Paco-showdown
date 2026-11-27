@@ -1,7 +1,7 @@
 import type { Snapshot } from '../game/snapshot.ts';
 import type { GameEventType } from '../game/types.ts';
 import type { LoopSpec } from './synth.ts';
-import { GAME_OVER, INTRO, LEVEL_CLEAR, MENU_THEME, MONSTER_THEME, MusicPlayer, ROLE_STING, playSong, type Song } from './songs.ts';
+import { GAME_OVER, HEART_FANFARE, INTRO, LEVEL_CLEAR, MENU_THEME, MONSTER_THEME, MusicPlayer, ROLE_STING, playSong, type Song } from './songs.ts';
 import { Synth } from './synth.ts';
 
 /** Looping background sounds, keyed by name (used by the game and the dev sound test). */
@@ -20,7 +20,7 @@ export const SOUND_TEST = {
     'dot', 'power', 'ghostEaten', 'monsterGulp', 'pacoCaught', 'death', 'wallSmash', 'monsterStart',
     'ready', 'blip', 'select',
   ] as SoundName[],
-  jingles: ['intro', 'roleReveal', 'levelClear', 'gameOver'] as SoundName[],
+  jingles: ['intro', 'roleReveal', 'levelClear', 'heartFull', 'gameOver'] as SoundName[],
   music: [
     ['MENU THEME', MENU_THEME],
     ['MONSTER THEME', MONSTER_THEME],
@@ -114,6 +114,8 @@ export class GameAudio {
     for (const e of s.events) {
       if (e.seq <= this.lastSeq) continue;
       this.lastSeq = e.seq;
+      // A full heart gets its own fanfare instead of the level-clear jingle.
+      if (e.type === 'levelClear' && s.heartAnim >= 0) continue;
       // Eating a ghost as Paco-Monster gets its own, heavier sound.
       this.play(e.type === 'ghostEaten' && s.monsterLeft > 0 ? 'monsterGulp' : e.type);
     }
@@ -191,6 +193,10 @@ export class GameAudio {
         sy.tone(160, 0.18, { wave: 'sawtooth', vol: 0.2, slideTo: 50 });
         sy.noise(0.12, { vol: 0.3, cutoff: 2500, sweepTo: 200 });
         for (let i = 0; i < 3; i++) sy.tone(294 * 2 ** (i / 3), 0.07, { wave: 'square', vol: 0.12, at: 0.15 + i * 0.06 });
+        break;
+      case 'heartFull':
+        // Lands as the heart reaches the middle of the screen.
+        playSong(sy, HEART_FANFARE, { at: 0.45 });
         break;
       case 'roleReveal':
         playSong(sy, ROLE_STING);

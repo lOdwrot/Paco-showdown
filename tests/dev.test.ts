@@ -72,3 +72,12 @@ describe('dev options', () => {
     expect(m.level.ghosts.every((g) => g.state === 'house')).toBe(true);
   });
 });
+
+describe('dev: heartAlmostFull', () => {
+  it('starts Paco-Monster with 3/4 of the heart filled', () => {
+    const m = make({ monsterNow: true, heartAlmostFull: true });
+    runUntil(m, () => m.phase === 'playing');
+    m.step(SIM_DT);
+    expect(m.snapshot().heart).toBe(3);
+  });
+});

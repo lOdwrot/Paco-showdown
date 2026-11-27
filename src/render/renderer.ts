@@ -1,4 +1,4 @@
-import { FOG, FRIGHT_FLASH_TIME, HUD_BOTTOM, HUD_TOP, MONSTER, TILE } from '../config.ts';
+import { FOG, FRIGHT_FLASH_TIME, HEART, HUD_BOTTOM, HUD_TOP, MONSTER, TILE } from '../config.ts';
 import { DEATH_ANIM_LEN, DEATH_ANIM_START } from '../game/match.ts';
 import { MAPS } from '../game/maps/index.ts';
 import { D_POWER, Maze } from '../game/maze.ts';
@@ -9,6 +9,43 @@ import { makeCanvas } from './pixels.ts';
 import { SPRITE, ghostFrame, pacDeathFrame, pacFrame, pacTransform, type GhostLook } from './sprites.ts';
 
 export const FONT = '"Press Start 2P", monospace';
+
+/** Paco-Monster heart (14x12): 'o' outline, '#' inside, 'h' shine (only when filled). */
+const HEART_ROWS = [
+  '..oooo..oooo..',
+  '.o#hh#oo####o.',
+  'o#h##########o',
+  'o#h##########o',
+  'o############o',
+  'o############o',
+  '.o##########o.',
+  '..o########o..',
+  '...o######o...',
+  '....o####o....',
+  '.....o##o.....',
+  '......oo......',
+];
+const HEART_W = 14;
+const HEART_H = 12;
+
+/** Heart sprite with `filled` quarters (clockwise from top-left). */
+function heartSprite(filled: number): HTMLCanvasElement {
+  const c = makeCanvas(HEART_W, HEART_H);
+  const g = c.getContext('2d')!;
+  HEART_ROWS.forEach((row, y) =>
+    [...row].forEach((ch, x) => {
+      if (ch === '.') return;
+      const left = x < HEART_W / 2;
+      const top = y < HEART_H / 2;
+      const quarter = top ? (left ? 0 : 1) : left ? 3 : 2;
+      const full = quarter < filled;
+      g.fillStyle = ch === 'o' ? '#ffffff' : !full ? '#2a0a14' : ch === 'h' ? '#ffc0d0' : '#ff1f4b';
+      g.fillRect(x, y, 1, 1);
+    }),
+  );
+  return c;
+}
+const HEART_SPRITES = Array.from({ length: HEART.pieces + 1 }, (_, i) => heartSprite(i));
 
 interface MazeCache {
   key: string;
@@ -172,6 +209,7 @@ export class Renderer {
     if ((s.mode === 'multi' || s.mode === 'hunt') && me?.role === 'ghost' && s.phase !== 'gameOver') this.drawFog(s, maze, rc.myId);
 
     this.drawHud(s, rc, maze);
+    this.drawHeart(s, rc, maze);
   }
 
   // ---------------------------------------------------------------- pieces
@@ -376,7 +414,7 @@ export class Renderer {
       this.text(String(s.highScore), W / 2, 9, '#fff', 'center');
     }
     this.text(`L${s.level}`, W - 4, 0, '#fff', 'right');
-    if (rc.dev) this.text('DEV', W / 2, HUD_TOP + maze.h * TILE + 4, '#ff3030', 'center', 6);
+    if (rc.dev) this.text('DEV', 4, 18, '#ff3030', 'left', 6);
 
     // Centre messages (below the ghost house, like the arcade).
     const h = maze.house;
@@ -390,7 +428,7 @@ export class Renderer {
       const col = Math.floor(rc.time * 8) % 2 ? '#ff8a00' : '#ffe600';
       this.text('PACO-MONSTER!', W / 2, 18, col, 'center', 6);
       this.text(s.monsterLeft.toFixed(1), W - 4, 9, col, 'right');
-    } else if (s.phase === 'levelComplete') {
+    } else if (s.phase === 'levelComplete' && !((s.heartAnim ?? -1) >= 0)) {
       this.text('LEVEL CLEAR!', W / 2, msgY, '#ffe600', 'center');
     }
 
@@ -405,6 +443,70 @@ export class Renderer {
       }
     }
     this.text(maze.def.name.toUpperCase(), W - 4, by + 4, maze.def.wallColor, 'right', 6);
+  }
+
+  /** Bottom-centre position of the Paco-Monster heart (native px, centre). */
+  private heartHome(maze: Maze) {
+    return { x: this.nativeW / 2, y: HUD_TOP + maze.h * TILE + HUD_BOTTOM / 2 };
+  }
+
+  /** Paco-Monster heart: fills a quarter per eaten ghost; when full it flies to the centre and grows. */
+  private drawHeart(s: Snapshot, rc: RenderContext, maze: Maze) {
+    const filled = s.heart ?? -1;
+    if (filled < 0 || s.phase === 'gameOver') return;
+    const ctx = this.ctx;
+    const img = HEART_SPRITES[Math.min(HEART.pieces, filled)]!;
+    const home = this.heartHome(maze);
+    const t = s.heartAnim ?? -1;
+    if (t < 0) {
+      ctx.drawImage(img, Math.round(home.x - HEART_W / 2), Math.round(home.y - HEART_H / 2));
+      return;
+    }
+    const centre = { x: this.nativeW / 2, y: this.nativeH / 2 };
+    const fly = Math.min(1, t / HEART.flyTime);
+    const ease = 1 - (1 - fly) ** 3;
+    const x = home.x + (centre.x - home.x) * ease;
+    const y = home.y + (centre.y - home.y) * ease;
+    const grow = Math.max(0, Math.min(1, (t - HEART.flyTime) / HEART.growTime));
+    // Ease-out-back: overshoots a little, then settles.
+    const back = 1 + 2.7 * (grow - 1) ** 3 + 1.7 * (grow - 1) ** 2;
+    const pulse = grow >= 1 ? 1 + Math.sin((t - HEART.flyTime - HEART.growTime) * 7) * 0.05 : 1;
+    const scale = (1 + ease) * (1 + (HEART.bigScale / 2 - 1) * back) * pulse;
+    const settled = t - HEART.flyTime - HEART.growTime;
+    if (settled > 0) {
+      // Light rays spinning behind the big heart.
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(settled * 0.8);
+      ctx.globalAlpha = Math.min(0.55, settled * 1.5);
+      ctx.fillStyle = '#ffe680';
+      for (let k = 0; k < 12; k++) {
+        ctx.rotate(Math.PI / 6);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-5, -70);
+        ctx.lineTo(5, -70);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, -HEART_W / 2, -HEART_H / 2);
+    ctx.restore();
+    if (settled > 0) {
+      // Twinkles around the heart.
+      ctx.fillStyle = '#ffffff';
+      for (let k = 0; k < 6; k++) {
+        const a = k * (Math.PI / 3) + settled * 1.6;
+        const r = 42 + Math.sin(settled * 5 + k) * 4;
+        if (Math.floor(rc.time * 8 + k) % 2) ctx.fillRect(Math.round(x + Math.cos(a) * r), Math.round(y + Math.sin(a) * r), 2, 2);
+      }
+      const blink = Math.floor(rc.time * 6) % 2 === 0;
+      this.text('+1 LIFE!', centre.x, centre.y + 40, blink ? '#ff4f78' : '#ffe600', 'center', 8);
+    }
   }
 
   private drawRoleReveal(s: Snapshot, role: 'paco' | 'ghost', rc: RenderContext) {

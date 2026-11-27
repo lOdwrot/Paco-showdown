@@ -4,6 +4,7 @@ import {
   GHOST_COUNT,
   GHOST_RELEASE,
   GHOST_RELEASE_AFTER_EATEN,
+  HEART,
   MODE_WAVES,
   MONSTER,
   PHASE,
@@ -61,6 +62,8 @@ export type LevelOutcome = { type: 'died'; caughtBySlot: number } | { type: 'cle
 export interface LevelHooks {
   emit(type: GameEventType): void;
   score(points: number, kind: 'dot' | 'power' | 'ghost'): void;
+  /** Paco-Monster ate every ghost: the heart is full (+1 life). */
+  heartFull(): void;
 }
 
 export interface LevelOptions {
@@ -72,6 +75,8 @@ export interface LevelOptions {
   noGhosts?: boolean;
   /** Paco steers himself (Ghost Hunt). */
   pacoAi?: boolean;
+  /** Dev: heart pieces already filled when Paco-Monster starts. */
+  heartStart?: number;
 }
 
 /**
@@ -93,6 +98,10 @@ export class Level {
   streak = 0;
   monster = false;
   monsterLeft = 0;
+  /** Paco-Monster heart: quarters filled (one per ghost eaten as the monster). */
+  heart = 0;
+  /** Dev: pieces already filled when Paco-Monster starts. */
+  heartStart: number;
   freeze = 0;
   popups: Popup[] = [];
   outcome: LevelOutcome = null;
@@ -115,10 +124,11 @@ export class Level {
     this.maze = new Maze(def);
     this.levelNum = levelNum;
     this.rng = createRng(opts.seed ?? 1234);
-    this.hooks = { emit: () => {}, score: () => {}, ...opts.hooks };
+    this.hooks = { emit: () => {}, score: () => {}, heartFull: () => {}, ...opts.hooks };
     this.invincible = opts.invincible ?? false;
     this.noGhosts = opts.noGhosts ?? false;
     this.pacoAi = opts.pacoAi ?? false;
+    this.heartStart = opts.heartStart ?? 0;
     this.dotsTotal = this.maze.countDots();
     this.dotsLeft = this.dotsTotal;
     this.paco = { x: 0, y: 0, dir: 'left', next: null, chomp: 0, moving: false, scale: 1, smashing: false };
@@ -384,6 +394,8 @@ export class Level {
   startMonster(): void {
     this.monster = true;
     this.monsterLeft = MONSTER.duration;
+    // Every Paco-Monster starts with an empty heart.
+    this.heart = Math.min(this.heartStart, HEART.pieces - 1);
     this.frightLeft = 0;
     this.paco.scale = MONSTER.scale;
     for (const g of this.ghosts) {
@@ -536,7 +548,13 @@ export class Level {
         this.popups.push({ x: g.x, y: g.y, text: String(pts), ttl: 1, color: '#00ffff' });
         g.state = 'eyes';
         g.frightened = false;
-        if (this.monster) g.noRespawn = true;
+        if (this.monster) {
+          g.noRespawn = true;
+          if (this.heart < HEART.pieces && ++this.heart === HEART.pieces) {
+            this.hooks.emit('heartFull');
+            this.hooks.heartFull();
+          }
+        }
         // Snap eyes to the grid so they can path-find home.
         g.x = Math.round(g.x);
         g.y = Math.round(g.y);

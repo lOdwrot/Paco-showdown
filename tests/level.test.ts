@@ -226,3 +226,40 @@ describe('Level progression', () => {
     expect(L.dotsLeft).toBeLessThan(L.dotsTotal);
   });
 });
+
+describe('Paco-Monster heart', () => {
+  it('fills a quarter per ghost eaten as Paco-Monster and fires heartFull at 4/4', () => {
+    let full = 0;
+    const { L, events } = setup(1);
+    L.setHooks({ heartFull: () => full++ });
+    L.startMonster();
+    expect(L.heart).toBe(0);
+    for (let i = 0; i < 4; i++) {
+      ghostOnPaco(L, i, false);
+      L.freeze = 0;
+      L.step(SIM_DT, idle);
+      expect(L.heart).toBe(i + 1);
+    }
+    expect(full).toBe(1);
+    expect(events.filter((e) => e === 'heartFull')).toHaveLength(1);
+    expect(L.outcome).toEqual({ type: 'cleared' });
+  });
+
+  it('ghosts eaten with a normal power ball do not fill the heart', () => {
+    const { L } = setup(1);
+    L.triggerPower();
+    ghostOnPaco(L, 0);
+    L.step(SIM_DT, idle);
+    expect(L.heart).toBe(0);
+  });
+
+  it('is empty every time Paco-Monster starts', () => {
+    const { L } = setup(1);
+    L.startMonster();
+    ghostOnPaco(L, 0, false);
+    L.step(SIM_DT, idle);
+    expect(L.heart).toBe(1);
+    L.startMonster();
+    expect(L.heart).toBe(0);
+  });
+});

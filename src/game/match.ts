@@ -1,4 +1,4 @@
-import { GHOST_COUNT, HUNT, LIVES_MULTI, LIVES_SINGLE, PHASE, SCORE } from '../config.ts';
+import { GHOST_COUNT, HEART, HUNT, LIVES_MULTI, LIVES_SINGLE, PHASE, SCORE } from '../config.ts';
 import { assignGhostSkins } from '../skins/catalog.ts';
 import { Level } from './level.ts';
 import { mapForLevel } from './maps/index.ts';
@@ -27,6 +27,8 @@ export interface DevOptions {
   mapIndex?: number;
   /** Start Paco-Monster as soon as the first round begins. */
   monsterNow?: boolean;
+  /** Paco-Monster's heart starts 3/4 full (one ghost away from +1 life). */
+  heartAlmostFull?: boolean;
   /** Start every round with a power ball active. */
   powerAtStart?: boolean;
   /** Ghosts can't catch Paco. */
@@ -80,6 +82,8 @@ export class Match {
   huntLeft: number = HUNT.duration;
   /** Ghost Hunt: true once Paco was caught (win). */
   huntWon = false;
+  /** Seconds since the Paco-Monster heart filled up (-1 = not full). */
+  heartAnim = -1;
   private afterReveal: 'intro' | 'ready' = 'intro';
   private readonly inputs = new Map<string, Dir | null>();
   private events: (GameEvent & { tick: number })[] = [];
@@ -142,6 +146,7 @@ export class Match {
 
   step(dt: number): void {
     this.tick++;
+    if (this.heartAnim >= 0) this.heartAnim += dt;
     this.phaseLeft = Math.max(0, this.phaseLeft - dt);
     switch (this.phase) {
       case 'roleReveal':
@@ -183,6 +188,7 @@ export class Match {
         } else if (out?.type === 'cleared') {
           this.emit('levelClear');
           this.setPhase('levelComplete');
+          if (this.heartAnim >= 0) this.phaseLeft = this.phaseTotal = Math.max(this.phaseTotal, HEART.celebrateTime);
         }
         break;
       }
@@ -245,6 +251,8 @@ export class Match {
       frightLeft: r2(L.frightLeft),
       frightTotal: L.frightTotal,
       monsterLeft: r2(L.monsterLeft),
+      heart: L.monster && this.mode !== 'hunt' ? L.heart : -1,
+      heartAnim: r2(this.heartAnim),
       players: this.players.map((p) => {
         const slot = this.ghostOwners.indexOf(p.id);
         return {
@@ -298,6 +306,7 @@ export class Match {
       invincible: this.dev.invincible,
       pacoAi: this.mode === 'hunt',
       noGhosts: this.dev.noGhosts,
+      heartStart: this.dev.heartAlmostFull ? HEART.pieces - 1 : 0,
     });
     if (this.dev.dotsLeft !== undefined) level.trimDots(this.dev.dotsLeft);
     level.setHooks({
@@ -305,6 +314,13 @@ export class Match {
       score: (pts) => {
         const p = this.player(this.pacoId);
         if (p) p.score += pts;
+      },
+      heartFull: () => {
+        // Full heart: the current Paco gets an extra life (and a celebration).
+        if (this.mode === 'hunt') return;
+        const p = this.player(this.pacoId);
+        if (p) p.lives++;
+        this.heartAnim = 0;
       },
     });
     return level;
@@ -418,6 +434,7 @@ export class Match {
    * dots and smashed walls are restored (or a fresh first level if they're new to it).
    */
   private switchPaco(next: string): void {
+    this.heartAnim = -1;
     this.progress.set(this.pacoId, { levelNum: this.levelNum, level: this.level });
     this.pacoId = next;
     const saved = this.progress.get(next);
@@ -433,6 +450,7 @@ export class Match {
   }
 
   private nextLevel(): void {
+    this.heartAnim = -1;
     this.levelNum++;
     this.level = this.createLevel();
     this.assignGhosts();

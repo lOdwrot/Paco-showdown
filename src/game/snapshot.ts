@@ -64,6 +64,10 @@ export interface Snapshot {
   frightLeft: number;
   frightTotal: number;
   monsterLeft: number;
+  /** Paco-Monster heart: quarters filled (0..4), -1 when Paco-Monster isn't on this level. */
+  heart: number;
+  /** Seconds since the heart filled up (celebration animation), -1 otherwise. */
+  heartAnim: number;
   players: SnapPlayer[];
   popups: Popup[];
   events: GameEvent[];
